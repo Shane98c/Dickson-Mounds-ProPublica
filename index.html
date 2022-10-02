@@ -2,20 +2,13 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>The Tragedy of North Birmingham</title>
+    <title>Dickson Mounds</title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
-    <!-- <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js"></script>
-    <link
-      href="https://api.tiles.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css"
-      rel="stylesheet"
-    /> -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
-
     <script src="https://unpkg.com/scrollama@3.2.0/build/scrollama.min.js"></script>
-    <script src="https://unpkg.com/topojson@3"></script>
 
     <style>
       body {
@@ -89,13 +82,6 @@
           font-size: 1em;
         }
       }
-
-      /* Fix issue on mobile browser where scroll breaks  */
-      .mapboxgl-canvas-container.mapboxgl-touch-zoom-rotate.mapboxgl-touch-drag-pan,
-      .mapboxgl-canvas-container.mapboxgl-touch-zoom-rotate.mapboxgl-touch-drag-pan
-        .mapboxgl-canvas {
-        touch-action: unset;
-      }
     </style>
   </head>
   <body>
@@ -103,7 +89,6 @@
 
     <div id="story"></div>
 
-    <!-- <script src="./config.js"></script> -->
     <script src="./ceded_IL_selectFields.js"></script>
 
     <script>
@@ -134,7 +119,7 @@
 
         container.appendChild(chapter);
         container.classList.add("centered");
-        // container.classList.add("hidden");
+        container.classList.add("hidden");
         const story = document.createElement("p");
 
         story.innerHTML = record.properties.year;
@@ -146,7 +131,8 @@
       story.appendChild(features);
 
       const scroller = scrollama();
-      var selection = d3.select("#map");
+
+      const selection = d3.select("#map");
       console.log(selection);
       const width = selection._groups[0][0].clientWidth;
       const height = selection._groups[0][0].clientHeight;
@@ -171,14 +157,35 @@
         .attr("fill", "#363636");
 
       const path = d3.geoPath().projection(projection);
-      const cededGeo = svg.append("g");
       const ilGeo = svg.append("g");
+      const cededGeo = svg.append("g");
+      const dropCededFeature = svg.append("g");
 
-      function makeMap(index) {
+      const defs = dropCededFeature.append("defs");
+
+      const filter = defs.append("filter").attr("id", "dropshadow");
+
+      filter
+        .append("feGaussianBlur")
+        .attr("in", "SourceAlpha")
+        .attr("stdDeviation", 4)
+        .attr("result", "blur");
+      filter
+        .append("feOffset")
+        .attr("in", "blur")
+        .attr("dx", 1)
+        .attr("dy", 1)
+        .attr("result", "offsetBlur");
+
+      const feMerge = filter.append("feMerge");
+
+      feMerge.append("feMergeNode").attr("in", "offsetBlur");
+      feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+      function makeMap(index, dropFeature) {
         const filtered = ceded.features.filter(function (feature) {
           return feature.properties.id > index;
         });
-        console.log(filtered);
         d3.json("IL.geojson").then(function (geojson) {
           ilGeo
             .selectAll("path")
@@ -188,7 +195,7 @@
             .attr("fill", "#69b3a2")
             .attr("fill-opacity", 0)
             .attr("d", path)
-            .style("stroke", "white")
+            .style("stroke", "black")
             .attr("stroke-width", "3");
         });
 
@@ -197,38 +204,75 @@
           .data(filtered, (d) => d.properties.id)
           .join(
             function (enter) {
-              return (
-                enter
-                  .append("path")
-
-                  .transition()
-                  .duration(1000)
-
-                  // .attr("opacity", 0)
-                  .attr("fill", "white")
-                  .attr("d", path)
-                  .attr("opacity", 1)
-                  .attr("fill-opacity", 0.4)
-
-                  .style("stroke", "black")
-              );
+              return enter
+                .append("path")
+                .transition()
+                .duration(1000)
+                .attr("fill", "white")
+                .attr("d", path)
+                .attr("opacity", 1)
+                .attr("fill-opacity", 1);
             },
             function (update) {
               return update;
             },
             function (exit) {
-              return exit
-                .transition()
-                .duration(1000)
-                .attr("transform", "translate(0," + height + ")")
-                .attr("opacity", 0)
-                .delay(200)
-                .style("stroke", "black")
-                .attr("stroke-width", "3")
-
-                .remove();
+              return (
+                exit.remove()
+              );
             }
           );
+        if (dropFeature) {
+          console.log(dropFeature);
+          dropCededFeature
+            .selectAll("path")
+            .data([dropFeature], (d) => d.properties.id)
+            .join(
+              function (enter) {
+                return enter
+                  .append("path")
+                  .attr("fill", "white")
+                  .attr("d", path)
+                  .attr("opacity", 1)
+                  .attr("fill-opacity", 1)
+                  .attr("stroke-width", 0)
+                  .transition()
+                  .duration(500)
+                  .style("stroke", "black")
+                  .attr("stroke-width", 1)
+                  .attr("filter", "url(#dropshadow)")
+                  .transition()
+                  .duration(500)
+                  .ease(d3.easeQuadIn)
+                  .attr("transform", "translate(0," + height + ")")
+                  .attr("opacity", 0)
+                  .remove();
+              },
+              function (update) {
+                return update;
+              },
+              function (exit) {
+                return exit
+                  .append("path")
+                  .attr("fill", "white")
+                  .attr("d", path)
+                  .attr("opacity", 1)
+                  .attr("fill-opacity", 1)
+                  .attr("stroke-width", 0)
+                  .transition()
+                  .duration(500)
+                  .style("stroke", "black")
+                  .attr("stroke-width", 1)
+                  .attr("filter", "url(#dropshadow)")
+                  .transition()
+                  .duration(500)
+                  .ease(d3.easeQuadIn)
+                  .attr("transform", "translate(0," + height + ")")
+                  .attr("opacity", 0)
+                  .remove();
+              }
+            );
+        }
       }
 
       makeMap(0);
@@ -241,52 +285,15 @@
         })
         .onStepEnter((response) => {
           const id = parseInt(response.element.id);
-          makeMap(id);
-          // const filtered = ceded.features.filter(function (feature) {
-          //   return feature.properties.id <= parseInt(response.element.id);
-          // });
-          // console.log(filtered);
-          // cededGeo
-          //   .selectAll("path")
-          //   .data(filtered, (d) => d.id)
-          //   .enter()
-          //   .append("path")
-          //   .merge(cededGeo)
-          //   .transition()
-          //   .duration(1000)
-          //   .attr("fill", "orange")
-          //   .attr("opacity", 1)
-          //   .style("stroke", "#fff");
-          // console.log(response);
-          // d3Layer
-          //   .data(ceded.features)
-          //   .filter(function (d) {
-          //     return d.properties.id <= parseInt(response.element.id);
-          //   })
-          //   .enter()
-          //   .append("path")
-          //   .attr("fill", "#69b3a2")
-          //   .attr("d", path)
-          //   .style("stroke", "#fff");
-          // d3.selectAll('cededGeo').filter(function(d) {
-          //   console.log(d)
-          //   return d.properties.id === response.element.id
-          // }
+          let dropFeature;
+          if (response.direction === "down") {
+            dropFeature = ceded.features[response.index];
+          }
+          response.direction === "up" && response.index === 0
+            ? makeMap(0)
+            : makeMap(id, dropFeature);
         })
-        .onStepExit((response) => {
-          // const chapter = config.chapters.find(
-          //   (chap) => chap.id === response.element.id
-          // );
-          // if (chapter.onChapterExit.length > 0) {
-          //   chapter.onChapterExit.forEach(setLayerOpacity);
-          // }
-          // if (chapter.exitCallback) {
-          //   window[chapter.exitCallback]();
-          // }
-          // if (response.index === 0 && response.direction === "up") {
-          //   map.fitBounds(config.start.bounds);
-          // }
-        });
+        .onStepExit((response) => {});
     </script>
   </body>
 </html>
