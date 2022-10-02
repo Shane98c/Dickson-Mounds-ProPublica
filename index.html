@@ -2,16 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>The Tragedy of North Birmingham</title>
+    <title>Dickson Mounds</title>
     <meta
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
-    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js"></script>
-    <link
-      href="https://api.tiles.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/scrollama@3.2.0/build/scrollama.min.js"></script>
 
     <style>
@@ -86,13 +82,6 @@
           font-size: 1em;
         }
       }
-
-      /* Fix issue on mobile browser where scroll breaks  */
-      .mapboxgl-canvas-container.mapboxgl-touch-zoom-rotate.mapboxgl-touch-drag-pan,
-      .mapboxgl-canvas-container.mapboxgl-touch-zoom-rotate.mapboxgl-touch-drag-pan
-        .mapboxgl-canvas {
-        touch-action: unset;
-      }
     </style>
   </head>
   <body>
@@ -100,7 +89,6 @@
 
     <div id="story"></div>
 
-    <script src="./config.js"></script>
     <script src="./ceded_IL_selectFields.js"></script>
 
     <script>
@@ -118,24 +106,6 @@
         full: "fully",
       };
 
-      function getLayerPaintType(layer) {
-        const layerType = map.getLayer(layer).type;
-        return layerTypes[layerType];
-      }
-
-      function setLayerOpacity(layer) {
-        const paintProps = getLayerPaintType(layer.layer);
-        paintProps.forEach(function (prop) {
-          let options = {};
-          if (layer.duration) {
-            const transitionProp = prop + "-transition";
-            options = { duration: layer.duration };
-            map.setPaintProperty(layer.layer, transitionProp, options);
-          }
-          map.setPaintProperty(layer.layer, prop, layer.opacity, options);
-        });
-      }
-
       const story = document.getElementById("story");
       const features = document.createElement("div");
       features.setAttribute("id", "features");
@@ -149,7 +119,7 @@
 
         container.appendChild(chapter);
         container.classList.add("centered");
-        // container.classList.add("hidden");
+        container.classList.add("hidden");
         const story = document.createElement("p");
 
         story.innerHTML = record.properties.year;
@@ -160,103 +130,170 @@
 
       story.appendChild(features);
 
-      mapboxgl.accessToken = config.accessToken;
-
-      const map = new mapboxgl.Map({
-        container: "map",
-        style: config.style,
-        projection: {
-          name: "lambertConformalConic",
-          center: config.start.center,
-          parallels: [30, 36],
-        },
-        bounds: config.start.bounds,
-        interactive: false,
-        attributionControl: false,
-      });
-      map.addControl(
-        new mapboxgl.AttributionControl({
-          customAttribution: "ProPublica, USDA",
-          compact: true,
-        })
-      );
-
       const scroller = scrollama();
 
-      function addAnimateLayers() {
-        const source = "ceded";
-        map.addSource(source, {
-          promoteId: "id",
-          type: "geojson",
-          data: ceded,
-        });
-        map.addLayer(
-          {
-            id: source,
-            type: "fill",
-            source: source,
-            layout: {},
-            paint: {
-              "fill-color": "white",
-              "fill-opacity": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                0.5,
-                0,
-              ],
-              "fill-opacity-transition": {
-                duration: 1000,
-                delay: 0,
-              },
-            },
-          },
-          "water"
-        );
-      }
+      const selection = d3.select("#map");
+      console.log(selection);
+      const width = selection._groups[0][0].clientWidth;
+      const height = selection._groups[0][0].clientHeight;
 
-      map.on("load", function () {
-        addAnimateLayers();
-        scroller
-          .setup({
-            step: ".step",
-            offset: 0.5,
-            progress: false,
-          })
-          .onStepEnter((response) => {
-            console.log(response);
-            function setState(state) {
-              // if (!state) map.removeFeatureState({source: 'ceded'})
-              map.setFeatureState(
-                {
-                  source: "ceded",
-                  id: response.element.id,
-                },
-                {
-                  selected: state,
-                }
+      const projection = d3
+        .geoAlbers()
+        .scale(10000)
+        .rotate([89.2, 0])
+        .center([0, 40])
+        .translate([width / 2, height / 2]);
+
+      const svg = d3
+        .select("#map")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+      svg
+        .append("rect")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("fill", "#363636");
+
+      const path = d3.geoPath().projection(projection);
+      const ilGeo = svg.append("g");
+      const cededGeo = svg.append("g");
+      const dropCededFeature = svg.append("g");
+
+      const defs = dropCededFeature.append("defs");
+
+      const filter = defs.append("filter").attr("id", "dropshadow");
+
+      filter
+        .append("feGaussianBlur")
+        .attr("in", "SourceAlpha")
+        .attr("stdDeviation", 4)
+        .attr("result", "blur");
+      filter
+        .append("feOffset")
+        .attr("in", "blur")
+        .attr("dx", 1)
+        .attr("dy", 1)
+        .attr("result", "offsetBlur");
+
+      const feMerge = filter.append("feMerge");
+
+      feMerge.append("feMergeNode").attr("in", "offsetBlur");
+      feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+      function makeMap(index, dropFeature) {
+        const filtered = ceded.features.filter(function (feature) {
+          return feature.properties.id > index;
+        });
+        d3.json("IL.geojson").then(function (geojson) {
+          ilGeo
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("path")
+            .attr("fill", "#69b3a2")
+            .attr("fill-opacity", 0)
+            .attr("d", path)
+            .style("stroke", "black")
+            .attr("stroke-width", "3");
+        });
+
+        cededGeo
+          .selectAll("path")
+          .data(filtered, (d) => d.properties.id)
+          .join(
+            function (enter) {
+              return enter
+                .append("path")
+                .transition()
+                .duration(1000)
+                .attr("fill", "white")
+                .attr("d", path)
+                .attr("opacity", 1)
+                .attr("fill-opacity", 1);
+            },
+            function (update) {
+              return update;
+            },
+            function (exit) {
+              return (
+                exit.remove()
               );
             }
-            if (response.direction === "down") {
-              setState(true);
-            } else {
-              setState(false);
-            }
-          })
-          .onStepExit((response) => {
-            // const chapter = config.chapters.find(
-            //   (chap) => chap.id === response.element.id
-            // );
-            // if (chapter.onChapterExit.length > 0) {
-            //   chapter.onChapterExit.forEach(setLayerOpacity);
-            // }
-            // if (chapter.exitCallback) {
-            //   window[chapter.exitCallback]();
-            // }
-            // if (response.index === 0 && response.direction === "up") {
-            //   map.fitBounds(config.start.bounds);
-            // }
-          });
-      });
+          );
+        if (dropFeature) {
+          console.log(dropFeature);
+          dropCededFeature
+            .selectAll("path")
+            .data([dropFeature], (d) => d.properties.id)
+            .join(
+              function (enter) {
+                return enter
+                  .append("path")
+                  .attr("fill", "white")
+                  .attr("d", path)
+                  .attr("opacity", 1)
+                  .attr("fill-opacity", 1)
+                  .attr("stroke-width", 0)
+                  .transition()
+                  .duration(500)
+                  .style("stroke", "black")
+                  .attr("stroke-width", 1)
+                  .attr("filter", "url(#dropshadow)")
+                  .transition()
+                  .duration(500)
+                  .ease(d3.easeQuadIn)
+                  .attr("transform", "translate(0," + height + ")")
+                  .attr("opacity", 0)
+                  .remove();
+              },
+              function (update) {
+                return update;
+              },
+              function (exit) {
+                return exit
+                  .append("path")
+                  .attr("fill", "white")
+                  .attr("d", path)
+                  .attr("opacity", 1)
+                  .attr("fill-opacity", 1)
+                  .attr("stroke-width", 0)
+                  .transition()
+                  .duration(500)
+                  .style("stroke", "black")
+                  .attr("stroke-width", 1)
+                  .attr("filter", "url(#dropshadow)")
+                  .transition()
+                  .duration(500)
+                  .ease(d3.easeQuadIn)
+                  .attr("transform", "translate(0," + height + ")")
+                  .attr("opacity", 0)
+                  .remove();
+              }
+            );
+        }
+      }
+
+      makeMap(0);
+
+      scroller
+        .setup({
+          step: ".step",
+          offset: 0.5,
+          progress: false,
+        })
+        .onStepEnter((response) => {
+          const id = parseInt(response.element.id);
+          let dropFeature;
+          if (response.direction === "down") {
+            dropFeature = ceded.features[response.index];
+          }
+          response.direction === "up" && response.index === 0
+            ? makeMap(0)
+            : makeMap(id, dropFeature);
+        })
+        .onStepExit((response) => {});
     </script>
   </body>
 </html>
