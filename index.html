@@ -240,7 +240,7 @@
           .attr("fill", "none")
           .attr("d", path)
           .style("stroke", waterColor)
-          .attr("stroke-width", "1.5");
+          .attr("stroke-width", "1");
       });
 
       function makeMap(year, dropFeatures) {
@@ -283,12 +283,12 @@
                   .attr("fill-opacity", 0.8)
                   .attr("stroke-width", 0)
                   .transition()
-                  .duration(400)
+                  .duration(600)
                   .attr("filter", "url(#dropshadow)")
                   .transition()
                   .duration(500)
                   .ease(d3.easeQuadIn)
-                  .attr("transform", "translate(0," + height / 2 + ")")
+                  .attr("transform", "translate(0," + height + ")")
                   .attr("opacity", 0)
                   .remove();
               },
@@ -304,7 +304,7 @@
                   .attr("fill-opacity", 1)
                   .attr("stroke-width", 0)
                   .transition()
-                  .duration(500)
+                  .duration(600)
                   .style("stroke", "black")
                   .attr("stroke-width", 1)
                   .attr("filter", "url(#dropshadow)")
