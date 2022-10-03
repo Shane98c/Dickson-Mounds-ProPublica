@@ -23,14 +23,19 @@
         position: sticky;
       }
 
-    #year {
-      position: absolute;
-      top: 10px;
-      left: 50%;
+      #year {
+        position: absolute;
+        top: 10px;
+        left: 0;
+        width: 50px;
+        text-align: center;
+        right: 0;
+        margin-left: auto;
+        margin-right: auto;
         font-family: Graphik, sans-serif;
         font-size: 2rem;
         color: rgb(81, 81, 81);
-    }
+      }
 
       #features {
         pointer-events: none;
@@ -117,9 +122,11 @@
         full: "fully",
       };
 
-      const years = new Set(ceded.features.map(feature => {
-        return feature.properties.year
-      }))
+      const years = new Set(
+        ceded.features.map((feature) => {
+          return feature.properties.year;
+        })
+      );
 
       const story = document.getElementById("story");
       const features = document.createElement("div");
@@ -153,7 +160,7 @@
 
       const projection = d3
         .geoAlbers()
-        .scale(8000)
+        .scale(6000)
         .rotate([89.2, 0])
         .center([0, 40])
         .translate([width / 2, height / 2]);
@@ -179,7 +186,7 @@
 
       const cededColor = "#D4DBD0";
       const waterColor = "#dde6f1";
-      const waterStroke = "#cedef2"
+      const waterStroke = "#cedef2";
 
       //this is all for making the drop shadow used below
       const defs = dropCededFeature.append("defs");
@@ -211,7 +218,6 @@
           .style("stroke", "grey")
           .attr("stroke-width", "1")
           .attr("stroke-opacity", "0.7");
-
       });
 
       d3.json("Lakes_simp.geojson").then(function (geojson) {
@@ -323,11 +329,11 @@
         })
         .onStepEnter((response) => {
           const year = parseInt(response.element.id);
-          document.getElementById("year").innerHTML = year
+          document.getElementById("year").innerHTML = year;
           let dropFeatures;
           if (response.direction === "down") {
-            dropFeatures = ceded.features.filter(feature => {
-              return feature.properties.year === year
+            dropFeatures = ceded.features.filter((feature) => {
+              return feature.properties.year === year;
             });
           }
           response.direction === "up" && response.index === 0
