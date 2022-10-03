@@ -106,15 +106,19 @@
         full: "fully",
       };
 
+      const years = new Set(ceded.features.map(feature => {
+        return feature.properties.year
+      }))
+
       const story = document.getElementById("story");
       const features = document.createElement("div");
       features.setAttribute("id", "features");
 
-      ceded.features.forEach((record, idx) => {
+      years.forEach((year, idx) => {
         const container = document.createElement("div");
         const chapter = document.createElement("div");
 
-        container.setAttribute("id", record.properties.id);
+        container.setAttribute("id", year);
         container.classList.add("step");
 
         container.appendChild(chapter);
@@ -122,7 +126,7 @@
         container.classList.add("hidden");
         const story = document.createElement("p");
 
-        story.innerHTML = record.properties.year;
+        story.innerHTML = year;
         chapter.appendChild(story);
 
         features.appendChild(container);
@@ -133,7 +137,6 @@
       const scroller = scrollama();
 
       const selection = d3.select("#map");
-      console.log(selection);
       const width = selection._groups[0][0].clientWidth;
       const height = selection._groups[0][0].clientHeight;
 
@@ -157,10 +160,10 @@
         .attr("fill", "#f5f5f5");
 
       const path = d3.geoPath().projection(projection);
-      const ilGeo = svg.append("g");
       const cededGeo = svg.append("g");
       const rivers = svg.append("g");
       const lakes = svg.append("g");
+      const ilGeo = svg.append("g");
       const dropCededFeature = svg.append("g");
 
       const cededColor = "#D4DBD0";
@@ -194,7 +197,9 @@
           .attr("fill-opacity", 0)
           .attr("d", path)
           .style("stroke", "grey")
-          .attr("stroke-width", "1");
+          .attr("stroke-width", "1")
+          .attr("stroke-opacity", "0.7");
+
       });
 
       d3.json("Lakes_simp.geojson").then(function (geojson) {
@@ -220,9 +225,9 @@
           .attr("stroke-width", "1.5");
       });
 
-      function makeMap(index, dropFeature) {
+      function makeMap(year, dropFeatures) {
         const filtered = ceded.features.filter(function (feature) {
-          return feature.properties.id > index;
+          return feature.properties.year > year;
         });
 
         cededGeo
@@ -246,11 +251,10 @@
               return exit.remove();
             }
           );
-        if (dropFeature) {
-          console.log(dropFeature);
+        if (dropFeatures) {
           dropCededFeature
             .selectAll("path")
-            .data([dropFeature], (d) => d.properties.id)
+            .data(dropFeatures, (d) => d.properties.id)
             .join(
               function (enter) {
                 return enter
@@ -258,13 +262,10 @@
                   .attr("d", path)
                   .attr("fill", cededColor)
                   .attr("opacity", 1)
-                  .attr("fill-opacity", 1)
+                  .attr("fill-opacity", 0.8)
                   .attr("stroke-width", 0)
-
                   .transition()
                   .duration(400)
-                  .style("stroke", "black")
-                  // .attr("stroke-width", 1)
                   .attr("filter", "url(#dropshadow)")
                   .transition()
                   .duration(500)
@@ -309,14 +310,16 @@
           progress: false,
         })
         .onStepEnter((response) => {
-          const id = parseInt(response.element.id);
-          let dropFeature;
+          const year = parseInt(response.element.id);
+          let dropFeatures;
           if (response.direction === "down") {
-            dropFeature = ceded.features[response.index];
+            dropFeatures = ceded.features.filter(feature => {
+              return feature.properties.year === year
+            });
           }
           response.direction === "up" && response.index === 0
             ? makeMap(0)
-            : makeMap(id, dropFeature);
+            : makeMap(year, dropFeatures);
         })
         .onStepExit((response) => {});
     </script>
