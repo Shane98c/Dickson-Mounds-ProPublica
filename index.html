@@ -233,8 +233,8 @@
           .attr("d", path)
           .attr("fill-opacity", 0)
           .style("stroke", "grey")
-          .attr("stroke-width", "1")
-          .attr("stroke-opacity", "0.7");
+          .attr("stroke-width", "2")
+          .attr("stroke-opacity", "0.4");
       });
 
       d3.json("Lakes_simp.geojson").then(function (geojson) {
@@ -331,11 +331,12 @@
         cededFader
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
-          .attr("opacity", 0.5)
+
           .join(
             function (enter) {
               return enter
                 .append("path")
+                .attr("opacity", 0.4)
                 .transition()
                 .duration(500)
                 .attr("stroke-width", 0)
