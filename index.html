@@ -7,8 +7,8 @@
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/scrollama@3.2.0/build/scrollama.min.js"></script>
+    <script src="lib/d3.v7.min.js"></script>
+    <script src="lib/scrollama.min.js"></script>
 
     <style>
       body {
@@ -21,20 +21,34 @@
         width: 100vw;
         max-width: 100%;
         position: sticky;
+        font-family: Graphik, sans-serif;
       }
 
-      #year {
+      #info {
         position: absolute;
         top: 10px;
         left: 0;
-        width: 150px;
+        min-width: 150px;
+        max-width: 33%;
         text-align: center;
         right: 0;
         margin-left: auto;
         margin-right: auto;
-        font-family: Graphik, sans-serif;
+      }
+
+      #year {
         font-size: 2rem;
         color: rgb(81, 81, 81);
+      }
+      #tribes {
+        font-size: 0.9rem;
+        color: rgb(81, 81, 81);
+      }
+
+      .place-label {
+        letter-spacing: 5px;
+        color: grey;
+        opacity: 0.5;
       }
 
       #features {
@@ -100,12 +114,16 @@
   </head>
   <body>
     <div id="map">
-      <div id="year"></div>
+      <div id="info">
+        <div id="year"></div>
+        <div id="tribes"></div>
+      </div>
     </div>
 
     <div id="story"></div>
 
     <script src="./ceded_IL_selectFields.js"></script>
+    <script src="mapExtentFeature.js"></script>
 
     <script>
       //todo clip bounds to il
@@ -131,6 +149,8 @@
           return feature.properties.year;
         })
       );
+
+      years.add(new Date().getFullYear());
 
       const story = document.getElementById("story");
       const features = document.createElement("div");
@@ -161,25 +181,26 @@
       const selection = d3.select("#map");
       const width = selection._groups[0][0].clientWidth;
       const height = selection._groups[0][0].clientHeight;
+    //   const width = 900;
+    // const height = 600;
 
       const cededColor = "#D4DBD0";
+      const dropFeatureColor = "#eaede8";
       const fadedColor = "#f5f5f5";
       const waterColor = "#dde6f1";
       const waterStroke = "#cedef2";
       const backgroundColor = "#D4DBD0";
 
-      const projection = d3
-        .geoAlbers()
-        .scale(6000)
-        .rotate([89.2, 0])
-        .center([0, 40])
-        .translate([width / 2, height / 2]);
+      const projection = d3.geoMercator()
+      .scale(1)
+      .translate([0, 0]);
 
       const svg = d3
         .select("#map")
         .append("svg")
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height)
+        .attr("preserveAspectRatio", "xMinYMin meet");
 
       svg
         .append("rect")
@@ -188,6 +209,26 @@
         .attr("fill", backgroundColor);
 
       const path = d3.geoPath().projection(projection);
+  
+        const b = path.bounds(mapExtentFeature);
+
+        // scale
+        const s = 0.7 / Math.min((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);  
+
+        // transform
+        const t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
+
+        // update projection
+        projection
+            .scale(s)
+            .translate(t);
+
+        // scale and postion
+        const raster_width = (b[1][0] - b[0][0]) * s;
+        const raster_height = (b[1][1] - b[0][1]) * s;
+
+        const rtranslate_x = (width - raster_width) / 2;
+        const rtranslate_y = (height - raster_height) / 2;
 
       const ilGeo = svg.append("g");
       const cededGeo = svg.append("g");
@@ -196,6 +237,20 @@
       const lakes = svg.append("g");
       const ilStroke = svg.append("g");
       const dropCededFeature = svg.append("g");
+      const labels = svg.append("g");
+      svg
+        .append("image")
+        .attr("id", "Raster")
+        .attr("xlink:href", "301_shade_x36_clip_extent.png")
+        .attr("class", "raster")
+        .attr("width", raster_width)
+        .attr("height", raster_height)
+        .attr("opacity", 0.2)
+
+        .attr(
+          "transform",
+          "translate(" + rtranslate_x + ", " + rtranslate_y + ")"
+        );
 
       //this is all for making the drop shadow used below
       const defs = dropCededFeature.append("defs");
@@ -260,6 +315,24 @@
           .attr("stroke-width", 1);
       });
 
+      d3.json("labels.geojson").then(function (geojson) {
+        labels
+          .selectAll("path")
+          .data(geojson.features)
+          .enter()
+          .append("text")
+          .attr("class", "place-label")
+          .text(function (d) {
+            return d.properties.label;
+          })
+          .attr("transform", function (d) {
+            return "translate(" + projection(d.geometry.coordinates) + ")";
+          })
+          .attr("text-anchor", "middle");
+        // .attr('dx', -20)
+        // .attr('dy', 15)
+      });
+
       function makeMap(year, dropFeatures) {
         const filtered = ceded.features.filter(function (feature) {
           return feature.properties.year > year;
@@ -279,7 +352,7 @@
                   .append("path")
                   .transition()
                   .duration(1000)
-                  .attr("stroke-width", 0.5)
+                  // .attr("stroke-width", 0.5)
                   // .style("stroke", "white")
                   .attr("fill", cededColor)
                   .attr("d", path)
@@ -294,40 +367,53 @@
               return exit.remove();
             }
           );
-        if (dropFeatures) {
-          function dropTransition(moment) {
-            return moment
+        // if (dropFeatures) {
+        function dropTransition(moment) {
+          return (
+            moment
               .append("path")
               .attr("d", path)
               .attr("fill", cededColor)
+              .attr("fill-opacity", 1)
               .attr("opacity", 1)
-              .attr("fill-opacity", 0.6)
-              .attr("stroke-width", 0)
               .transition()
               .duration(600)
+              .attr("fill", dropFeatureColor)
+              .attr("opacity", 1)
+              .attr("fill-opacity", 1)
+              // .attr("stroke-width", 2)
+              // .attr("stroke", 'white')
               .attr("filter", "url(#dropshadow)")
-              .transition()
-              .duration(500)
-              .ease(d3.easeQuadIn)
-              .attr("transform", "translate(0," + height + ")")
-              .attr("opacity", 0)
-              .remove();
-          }
-          dropCededFeature
-            .selectAll("path")
-            .data(dropFeatures, (d) => d.properties.id)
-            .join(
-              function (enter) {
-                return dropTransition(enter);
-              },
-              function (update) {
-                return update;
-              },
-              function (exit) {
-                return dropTransition(exit);
-              }
-            );
+          );
         }
+        dropCededFeature
+          .selectAll("path")
+          .data(dropFeatures, (d) => d.properties.id)
+          .join(
+            function (enter) {
+              return dropTransition(enter);
+            },
+            function (update) {
+              return update;
+            },
+            function (exit) {
+              // return dropTransition(exit);
+              return (
+                exit
+                  // .transition()
+                  // .duration(500)
+                  // .attr("opacity", 0)
+                  .transition()
+                  .duration(500)
+                  .ease(d3.easeQuadIn)
+                  // .attr("transform", "translate(0," + height + ")")
+                  .attr("opacity", 0)
+                  .remove()
+                  .remove()
+              );
+            }
+          );
+        // }
         cededFader
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
@@ -336,9 +422,12 @@
             function (enter) {
               return enter
                 .append("path")
-                .attr("opacity", 0.4)
+                .attr("fill", cededColor)
+
                 .transition()
                 .duration(500)
+                .attr("opacity", 0.4)
+
                 .attr("stroke-width", 0)
                 .attr("fill", fadedColor)
                 .attr("d", path)
@@ -353,7 +442,7 @@
           );
       }
 
-      makeMap(0);
+      makeMap(0, []);
 
       scroller
         .setup({
@@ -363,15 +452,15 @@
         })
         .onStepEnter((response) => {
           const year = parseInt(response.element.id);
-          document.getElementById("year").innerHTML = year;
-          let dropFeatures;
+          let dropFeatures = [];
           if (response.direction === "down") {
             dropFeatures = ceded.features.filter((feature) => {
               return feature.properties.year === year;
             });
           }
+          document.getElementById("year").innerHTML = year;
           response.direction === "up" && response.index === 0
-            ? makeMap(0)
+            ? makeMap(0, [])
             : makeMap(year, dropFeatures);
         })
         .onStepExit((response) => {});
