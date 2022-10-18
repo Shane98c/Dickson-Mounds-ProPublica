@@ -45,6 +45,10 @@
         color: rgb(81, 81, 81);
       }
 
+      .explainer {
+        padding-bottom: 80vh !important;
+      }
+
       .place-label {
         letter-spacing: 15px;
         color: grey;
@@ -74,7 +78,7 @@
       }
       .step {
         z-index: 100;
-        padding-bottom: 10vh;
+        padding-bottom: 50vh;
         opacity: 0.95;
       }
       .step div {
@@ -116,7 +120,6 @@
     <div id="map">
       <div id="info">
         <div id="year"></div>
-        <div id="tribes"></div>
       </div>
     </div>
 
@@ -152,6 +155,8 @@
 
       years.add(new Date().getFullYear());
 
+      let currentStep = 0;
+
       const story = document.getElementById("story");
       const features = document.createElement("div");
       features.setAttribute("id", "features");
@@ -166,9 +171,15 @@
         container.appendChild(chapter);
         container.classList.add("centered");
         container.classList.add("hidden");
-        const story = document.createElement("p");
+        let story = document.createElement("p");
 
         story.innerHTML = year;
+
+        if (year === 1803) {
+          container.classList.remove("hidden");
+          story.innerHTML = "Treaties took";
+          container.classList.add("explainer");
+        }
         chapter.appendChild(story);
 
         features.appendChild(container);
@@ -178,173 +189,176 @@
 
       const scroller = scrollama();
 
-      const selection = d3.select("#map");
-      const width = selection._groups[0][0].clientWidth;
-      const height = selection._groups[0][0].clientHeight;
-      //   const width = 900;
-      // const height = 600;
-
-      const cededColor = "#D4DBD0";
-      const dropFeatureColor = "#eaede8";
-      const fadedColor = "#f5f5f5";
-      const waterColor = "#dde6f1";
-      const waterStroke = "#cedef2";
-      const backgroundColor = "#D4DBD0";
+      const cededColor = "#D4DBD0",
+        dropFeatureColor = "#eaede8",
+        fadedColor = "#f5f5f5",
+        waterColor = "#dde6f1",
+        waterStroke = "#cedef2",
+        backgroundColor = "#D4DBD0";
 
       const projection = d3.geoMercator().scale(1).translate([0, 0]);
-
-      const svg = d3
-        .select("#map")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("preserveAspectRatio", "xMinYMin meet");
-
-      svg
-        .append("rect")
-        .attr("width", "100%")
-        .attr("height", "100%")
-        .attr("fill", backgroundColor);
-
       const path = d3.geoPath().projection(projection);
 
-      const b = path.bounds(mapExtentFeature);
+      function setupMap() {
+        d3.select("svg").remove();
+        const selection = d3.select("#map");
+        const width = selection._groups[0][0].clientWidth;
+        const height = selection._groups[0][0].clientHeight;
 
-      // scale
-      const s =
-        0.7 /
-        Math.min((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
+        const svg = d3
+          .select("#map")
+          .append("svg")
+          .attr("width", "100%")
+          .attr("height", "100%");
 
-      // transform
-      const t = [
-        (width - s * (b[1][0] + b[0][0])) / 2,
-        (height - s * (b[1][1] + b[0][1])) / 2,
-      ];
+        svg
+          .append("rect")
+          .attr("width", "100%")
+          .attr("height", "100%")
+          .attr("opacity", 0.9)
+          .attr("fill", backgroundColor);
 
-      // update projection
-      projection.scale(s).translate(t);
+        //get raster transformations
+        //https://stackoverflow.com/questions/14492284/center-a-map-in-d3-given-a-geojson-object/14691788#14691788
+        const b = path.bounds(mapExtentFeature);
+        b.s = b[0][1];
+        b.n = b[1][1];
+        b.w = b[0][0];
+        b.e = b[1][0];
+        b.height = Math.abs(b.n - b.s);
+        b.width = Math.abs(b.e - b.w);
+        s = 0.9 / Math.max(b.width / width, b.height / height);
+        const t = [
+          (width - s * (b[1][0] + b[0][0])) / 2,
+          (height - s * (b[1][1] + b[0][1])) / 2,
+        ];
+        projection.scale(s).translate(t);
+        const raster_width = (b[1][0] - b[0][0]) * s;
+        const raster_height = (b[1][1] - b[0][1]) * s;
+        const rtranslate_x = (width - raster_width) / 2;
+        const rtranslate_y = (height - raster_height) / 2;
 
-      // scale and postion
-      const raster_width = (b[1][0] - b[0][0]) * s;
-      const raster_height = (b[1][1] - b[0][1]) * s;
+        //setup layers
+        const ilGeo = svg.append("g");
+        const cededGeo = svg.append("g");
+        const Raster = svg
+          .append("image")
+          .attr("id", "Raster")
+          .attr("xlink:href", "301_z100_lt.png")
+          .attr("class", "raster")
+          .attr("width", raster_width)
+          .attr("height", raster_height)
+          .attr("opacity", 0.5)
+          .attr(
+            "transform",
+            "translate(" + rtranslate_x + ", " + rtranslate_y + ")"
+          );
+        const cededFader = svg.append("g");
+        const rivers = svg.append("g");
+        const lakes = svg.append("g");
+        const ilStroke = svg.append("g");
+        const dropCededFeature = svg.append("g");
+        const labels = svg.append("g");
 
-      const rtranslate_x = (width - raster_width) / 2;
-      const rtranslate_y = (height - raster_height) / 2;
+        //this is all for making the drop shadow used below
+        const defs = dropCededFeature.append("defs");
+        const filter = defs.append("filter").attr("id", "dropshadow");
+        filter
+          .append("feGaussianBlur")
+          .attr("in", "SourceAlpha")
+          .attr("stdDeviation", 1)
+          .attr("result", "blur");
+        filter
+          .append("feOffset")
+          .attr("in", "blur")
+          .attr("dx", 0)
+          .attr("dy", 0)
+          .attr("result", "offsetBlur");
+        const feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode").attr("in", "offsetBlur");
+        feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-      const ilGeo = svg.append("g");
-      const cededGeo = svg.append("g");
-      svg
-        .append("image")
-        .attr("id", "Raster")
-        .attr("xlink:href", "301_z100_lt.png")
-        .attr("class", "raster")
-        .attr("width", raster_width)
-        .attr("height", raster_height)
-        .attr("opacity", 0.5)
-        .attr(
-          "transform",
-          "translate(" + rtranslate_x + ", " + rtranslate_y + ")"
-        );
-      const cededFader = svg.append("g");
-      const rivers = svg.append("g");
-      const lakes = svg.append("g");
-      const ilStroke = svg.append("g");
-      const dropCededFeature = svg.append("g");
-      const labels = svg.append("g");
+        //add layers
+        d3.json("IL.geojson").then(function (geojson) {
+          ilGeo
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("path")
+            .attr("fill", "#f5f5f5")
+            .attr("fill-opacity", 1)
+            .attr("d", path);
+          ilStroke
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("path")
+            .attr("d", path)
+            .attr("fill-opacity", 0)
+            .style("stroke", "grey")
+            .attr("stroke-width", "2")
+            .attr("stroke-opacity", "0.4");
+        });
+        d3.json("Lakes_simp.geojson").then(function (geojson) {
+          lakes
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("path")
+            .attr("fill", waterColor)
+            .attr("fill-opacity", 1)
+            .attr("d", path);
+        });
+        d3.json("Rivers_simp.geojson").then(function (geojson) {
+          rivers
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("path")
+            .attr("fill", "none")
+            .attr("d", path)
+            .style("stroke", waterColor)
+            .attr("stroke-width", 1);
+        });
+        d3.json("labels.geojson").then(function (geojson) {
+          labels
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("text")
+            .attr("class", "place-label")
+            .text(function (d) {
+              return d.properties.label;
+            })
+            .attr("transform", function (d) {
+              return "translate(" + projection(d.geometry.coordinates) + ")";
+            })
+            .attr("text-anchor", "middle");
+          // .attr('dx', -20)
+          // .attr('dy', 15)
+        });
+        return {
+          cededGeo,
+          dropCededFeature,
+          cededFader,
+        };
+      }
 
-      //this is all for making the drop shadow used below
-      const defs = dropCededFeature.append("defs");
-      const filter = defs.append("filter").attr("id", "dropshadow");
-      filter
-        .append("feGaussianBlur")
-        .attr("in", "SourceAlpha")
-        .attr("stdDeviation", 1)
-        .attr("result", "blur");
-      filter
-        .append("feOffset")
-        .attr("in", "blur")
-        .attr("dx", 0)
-        .attr("dy", 0)
-        .attr("result", "offsetBlur");
-      const feMerge = filter.append("feMerge");
-      feMerge.append("feMergeNode").attr("in", "offsetBlur");
-      feMerge.append("feMergeNode").attr("in", "SourceGraphic");
-
-      d3.json("IL.geojson").then(function (geojson) {
-        ilGeo
-          .selectAll("path")
-          .data(geojson.features)
-          .enter()
-          .append("path")
-          .attr("fill", "#f5f5f5")
-          .attr("fill-opacity", 1)
-          .attr("d", path);
-
-        ilStroke
-          .selectAll("path")
-          .data(geojson.features)
-          .enter()
-          .append("path")
-          .attr("d", path)
-          .attr("fill-opacity", 0)
-          .style("stroke", "grey")
-          .attr("stroke-width", "2")
-          .attr("stroke-opacity", "0.4");
-      });
-
-      d3.json("Lakes_simp.geojson").then(function (geojson) {
-        lakes
-          .selectAll("path")
-          .data(geojson.features)
-          .enter()
-          .append("path")
-          .attr("fill", waterColor)
-          .attr("fill-opacity", 1)
-          .attr("d", path);
-      });
-
-      d3.json("Rivers_simp.geojson").then(function (geojson) {
-        rivers
-          .selectAll("path")
-          .data(geojson.features)
-          .enter()
-          .append("path")
-          .attr("fill", "none")
-          .attr("d", path)
-          .style("stroke", waterColor)
-          .attr("stroke-width", 1);
-      });
-
-      d3.json("labels.geojson").then(function (geojson) {
-        labels
-          .selectAll("path")
-          .data(geojson.features)
-          .enter()
-          .append("text")
-          .attr("class", "place-label")
-          .text(function (d) {
-            return d.properties.label;
-          })
-          .attr("transform", function (d) {
-            return "translate(" + projection(d.geometry.coordinates) + ")";
-          })
-          .attr("text-anchor", "middle");
-        // .attr('dx', -20)
-        // .attr('dy', 15)
-      });
-
-      function makeMap(year, dropFeatures) {
-        const filtered = ceded.features.filter(function (feature) {
+      function updateMap(year, dropFeatures, layers) {
+        //get features still waiting to be faded
+        const stillHere = ceded.features.filter(function (feature) {
           return feature.properties.year > year;
         });
+
+        //get features that should show up as faded on the map
         const faded = ceded.features.filter(function (feature) {
           if (year === 0) return false;
           return feature.properties.year <= year;
         });
 
-        cededGeo
+        layers.cededGeo
           .selectAll("path")
-          .data(filtered, (d) => d.properties.id)
+          .data(stillHere, (d) => d.properties.id)
           .join(
             function (enter) {
               return (
@@ -367,7 +381,6 @@
               return exit.remove();
             }
           );
-        // if (dropFeatures) {
         function dropTransition(moment) {
           return moment
             .append("path")
@@ -384,7 +397,7 @@
             .attr("stroke", "white")
             .attr("filter", "url(#dropshadow)");
         }
-        dropCededFeature
+        layers.dropCededFeature
           .selectAll("path")
           .data(dropFeatures, (d) => d.properties.id)
           .join(
@@ -395,7 +408,6 @@
               return update;
             },
             function (exit) {
-              // return dropTransition(exit);
               return (
                 exit
                   // .transition()
@@ -403,15 +415,15 @@
                   // .attr("opacity", 0)
                   .transition()
                   .duration(500)
-                  .ease(d3.easeQuadIn)
+                  // .ease(d3.easeQuadIn)
                   // .attr("transform", "translate(0," + height + ")")
                   .attr("opacity", 0)
                   .remove()
               );
             }
           );
-        // }
-        cededFader
+        
+        layers.cededFader
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
 
@@ -420,11 +432,9 @@
               return enter
                 .append("path")
                 .attr("fill", cededColor)
-
                 .transition()
                 .duration(500)
                 .attr("opacity", 1)
-
                 .attr("stroke-width", 0)
                 .attr("fill", fadedColor)
                 .attr("d", path)
@@ -439,7 +449,8 @@
           );
       }
 
-      makeMap(0, []);
+      let layers = setupMap();
+      updateMap(0, [], layers);
 
       scroller
         .setup({
@@ -456,11 +467,31 @@
             });
           }
           document.getElementById("year").innerHTML = year;
-          response.direction === "up" && response.index === 0
-            ? makeMap(0, [])
-            : makeMap(year, dropFeatures);
+
+          if (response.direction === "up" && response.index === 0) {
+            currentStep = 0;
+            updateMap(0, [], layers);
+          } else {
+            currentStep = year;
+            updateMap(year, dropFeatures, layers);
+          }
+        });
+      // .onStepExit((response) => {});
+
+      function debounce(fn) {
+        let timer;
+        return function (event) {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(fn, 100, event);
+        };
+      }
+      window.addEventListener(
+        "resize",
+        debounce(function () {
+          layers = setupMap();
+          updateMap(currentStep, [], layers);
         })
-        .onStepExit((response) => {});
+      );
     </script>
   </body>
 </html>
