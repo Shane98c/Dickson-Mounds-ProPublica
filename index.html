@@ -24,6 +24,33 @@
         font-family: Graphik, sans-serif;
       }
 
+      input[type="range"] {
+        position: absolute;
+        top: 40%;
+        transform: rotate(90deg);
+      }
+
+      #progressContainer {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+       li {
+        display: block;
+        width: 6px;
+        height: 6px;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 50%;
+        padding: 0;
+        margin: 3px 0;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        transition: border-color 0.3s ease, background-color 0.3s ease;
+      }
+      .active {
+        background-color: #5d8844;
+        border: 1px solid #5d8844;
+        opacity: 0.6;
+      }
       #info {
         position: absolute;
         top: 10px;
@@ -54,6 +81,18 @@
         color: grey;
         opacity: 0.4;
       }
+      #scaler {
+        transform: scale(1);
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: scaleAnim 1.3s forwards;
+      }
+
+      @keyframes scaleAnim {
+        to {
+          transform: scale(0.5);
+        }
+      }
 
       #features {
         pointer-events: none;
@@ -78,7 +117,7 @@
       }
       .step {
         z-index: 100;
-        padding-bottom: 50vh;
+        padding-bottom: 20vh;
         opacity: 0.95;
       }
       .step div {
@@ -118,9 +157,12 @@
   </head>
   <body>
     <div id="map">
+      <!-- <input id="progress" type="range" min="1795" max="1833" step="1" /> -->
+
       <div id="info">
         <div id="year"></div>
       </div>
+      <ul id="progressContainer"></ul>
     </div>
 
     <div id="story"></div>
@@ -129,10 +171,7 @@
     <script src="mapExtentFeature.js"></script>
 
     <script>
-      //todo clip bounds to il
       //explainer then draw ceded bounds
-      //maybe another layer to simulate change in opacity on shape drop
-      //
       const layerTypes = {
         fill: ["fill-opacity"],
         line: ["line-opacity"],
@@ -160,6 +199,7 @@
       const story = document.getElementById("story");
       const features = document.createElement("div");
       features.setAttribute("id", "features");
+      const progressContainer = document.getElementById("progressContainer");
 
       years.forEach((year, idx) => {
         const container = document.createElement("div");
@@ -177,20 +217,24 @@
 
         if (year === 1803) {
           container.classList.remove("hidden");
-          story.innerHTML = "Treaties took";
+          story.innerHTML = "Treaties explainer";
           container.classList.add("explainer");
         }
         chapter.appendChild(story);
 
         features.appendChild(container);
+
+        const progressStep = document.createElement("li");
+        progressStep.setAttribute("id", "li" + year);
+        progressContainer.appendChild(progressStep);
       });
 
       story.appendChild(features);
 
       const scroller = scrollama();
 
-      const cededColor = "#D4DBD0",
-        dropFeatureColor = "#eaede8",
+      const cededColor = "#5d8844",
+        dropFeatureColor = "#c8ddbb",
         fadedColor = "#f5f5f5",
         waterColor = "#dde6f1",
         waterStroke = "#cedef2",
@@ -381,25 +425,31 @@
               return exit.remove();
             }
           );
+
         function dropTransition(moment) {
-          return moment
-            .append("path")
-            .attr("d", path)
-            .attr("fill", cededColor)
-            .attr("fill-opacity", 1)
-            .attr("opacity", 1)
-            .transition()
-            .duration(600)
-            .attr("fill", dropFeatureColor)
-            .attr("opacity", 1)
-            .attr("fill-opacity", 1)
-            .attr("stroke-width", 2)
-            .attr("stroke", "white")
-            .attr("filter", "url(#dropshadow)");
+          return (
+            moment
+              .append("path")
+              .attr("d", path)
+              .attr("fill", dropFeatureColor)
+              .attr("fill-opacity", 0.6)
+              .attr("opacity", 1)
+              .transition()
+              .duration(600)
+              .attr("fill", dropFeatureColor)
+              .attr("opacity", 1)
+              .attr("fill-opacity", 0.6)
+
+              .attr("stroke-width", 2)
+              .attr("stroke", "white")
+
+              .attr("filter", "url(#dropshadow)")
+          );
         }
         layers.dropCededFeature
           .selectAll("path")
           .data(dropFeatures, (d) => d.properties.id)
+
           .join(
             function (enter) {
               return dropTransition(enter);
@@ -413,6 +463,8 @@
                   // .transition()
                   // .duration(500)
                   // .attr("opacity", 0)
+                  .attr("id", "scaler")
+
                   .transition()
                   .duration(500)
                   // .ease(d3.easeQuadIn)
@@ -422,7 +474,7 @@
               );
             }
           );
-        
+
         layers.cededFader
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
@@ -435,7 +487,8 @@
                 .transition()
                 .duration(500)
                 .attr("opacity", 1)
-                .attr("stroke-width", 0)
+                .attr("stroke-width", 1)
+                .attr("stroke", "white")
                 .attr("fill", fadedColor)
                 .attr("d", path)
                 .attr("fill-opacity", 0.5);
@@ -455,11 +508,19 @@
       scroller
         .setup({
           step: ".step",
-          offset: 0.5,
+          offset: 0.2,
           progress: false,
         })
         .onStepEnter((response) => {
           const year = parseInt(response.element.id);
+          years.forEach((yr) => {
+            if (yr === year) {
+              document.getElementById("li" + year).classList.add("active");
+            } else {
+              document.getElementById("li" + yr).classList.remove("active");
+            }
+          });
+          document.getElementById("li" + year).classList.add("active");
           let dropFeatures = [];
           if (response.direction === "down") {
             dropFeatures = ceded.features.filter((feature) => {
@@ -476,7 +537,6 @@
             updateMap(year, dropFeatures, layers);
           }
         });
-      // .onStepExit((response) => {});
 
       function debounce(fn) {
         let timer;
