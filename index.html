@@ -36,7 +36,7 @@
         transform: translateY(-50%);
         padding-left: 15px;
       }
-       li {
+      li {
         display: block;
         width: 6px;
         height: 6px;
@@ -173,20 +173,6 @@
 
     <script>
       //explainer then draw ceded bounds
-      const layerTypes = {
-        fill: ["fill-opacity"],
-        line: ["line-opacity"],
-        circle: ["circle-opacity", "circle-stroke-opacity"],
-        symbol: ["icon-opacity", "text-opacity"],
-        raster: ["raster-opacity"],
-      };
-
-      const alignments = {
-        left: "lefty",
-        center: "centered",
-        full: "fully",
-      };
-
       const years = new Set(
         ceded.features.map((feature) => {
           return feature.properties.year;
@@ -235,16 +221,15 @@
       const scroller = scrollama();
 
       const cededColor = "#5d8844",
-        dropFeatureColor = "#c8ddbb",
+        dropFeatureColor = "#e4eedd",
         fadedColor = "#f5f5f5",
         waterColor = "#dde6f1",
         waterStroke = "#cedef2",
         backgroundColor = "#D4DBD0";
 
-      const projection = d3.geoMercator().scale(1).translate([0, 0]);
-      const path = d3.geoPath().projection(projection);
-
       function setupMap() {
+        const projection = d3.geoMercator().scale(1).translate([0, 0]);
+        const path = d3.geoPath().projection(projection);
         d3.select("svg").remove();
         const selection = d3.select("#map");
         const width = selection._groups[0][0].clientWidth;
@@ -260,7 +245,7 @@
           .append("rect")
           .attr("width", "100%")
           .attr("height", "100%")
-          .attr("opacity", 0.9)
+          .attr("opacity", 1)
           .attr("fill", backgroundColor);
 
         //get raster transformations
@@ -289,11 +274,11 @@
         const Raster = svg
           .append("image")
           .attr("id", "Raster")
-          .attr("xlink:href", "301_z100_lt.png")
+          .attr("xlink:href", "301_z100_lt_cedeClip.png")
           .attr("class", "raster")
           .attr("width", raster_width)
           .attr("height", raster_height)
-          .attr("opacity", 0.5)
+          .attr("opacity", 0.7)
           .attr(
             "transform",
             "translate(" + rtranslate_x + ", " + rtranslate_y + ")"
@@ -324,7 +309,8 @@
         feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
         //add layers
-        d3.json("IL.geojson").then(function (geojson) {
+        d3.json("IL_fromCede.geojson").then(function (geojson) {
+          console.log(geojson);
           ilGeo
             .selectAll("path")
             .data(geojson.features)
@@ -386,10 +372,12 @@
           cededGeo,
           dropCededFeature,
           cededFader,
+          path
         };
       }
 
       function updateMap(year, dropFeatures, layers) {
+        console.log(year, dropFeatures, layers);
         //get features still waiting to be faded
         const stillHere = ceded.features.filter(function (feature) {
           return feature.properties.year > year;
@@ -414,7 +402,7 @@
                   // .attr("stroke-width", 0.5)
                   // .style("stroke", "white")
                   .attr("fill", cededColor)
-                  .attr("d", path)
+                  .attr("d", layers.path)
                   .attr("opacity", 1)
                   .attr("fill-opacity", 1)
               );
@@ -428,24 +416,22 @@
           );
 
         function dropTransition(moment) {
-          return (
-            moment
-              .append("path")
-              .attr("d", path)
-              .attr("fill", dropFeatureColor)
-              .attr("fill-opacity", 0.6)
-              .attr("opacity", 1)
-              .transition()
-              .duration(600)
-              .attr("fill", dropFeatureColor)
-              .attr("opacity", 1)
-              .attr("fill-opacity", 0.6)
+          return moment
+            .append("path")
+            .attr("d", layers.path)
+            .attr("fill", dropFeatureColor)
+            .attr("fill-opacity", 0.9)
+            .attr("opacity", 1)
+            .transition()
+            .duration(600)
+            .attr("fill", dropFeatureColor)
+            .attr("opacity", 1)
+            .attr("fill-opacity", 0.9)
 
-              .attr("stroke-width", 2)
-              .attr("stroke", "white")
+            .attr("stroke-width", 2)
+            .attr("stroke", "white")
 
-              .attr("filter", "url(#dropshadow)")
-          );
+            .attr("filter", "url(#dropshadow)");
         }
         layers.dropCededFeature
           .selectAll("path")
@@ -482,17 +468,19 @@
 
           .join(
             function (enter) {
-              return enter
-                .append("path")
-                .attr("fill", cededColor)
-                .transition()
-                .duration(500)
-                .attr("opacity", 1)
-                .attr("stroke-width", 1)
-                .attr("stroke", "white")
-                .attr("fill", fadedColor)
-                .attr("d", path)
-                .attr("fill-opacity", 0.5);
+              return (
+                enter
+                  .append("path")
+                  .attr("fill", cededColor)
+                  .transition()
+                  .duration(500)
+                  .attr("opacity", 1)
+                  // .attr("stroke-width", 1)
+                  // .attr("stroke", "white")
+                  .attr("fill", fadedColor)
+                  .attr("d", layers.path)
+                  .attr("fill-opacity", 0.5)
+              );
             },
             function (update) {
               return update;
@@ -521,7 +509,6 @@
               document.getElementById("li" + yr).classList.remove("active");
             }
           });
-          document.getElementById("li" + year).classList.add("active");
           let dropFeatures = [];
           if (response.direction === "down") {
             dropFeatures = ceded.features.filter((feature) => {
@@ -543,14 +530,18 @@
         let timer;
         return function (event) {
           if (timer) clearTimeout(timer);
-          timer = setTimeout(fn, 100, event);
+          timer = setTimeout(fn, 500, event);
         };
       }
       window.addEventListener(
         "resize",
         debounce(function () {
           layers = setupMap();
-          updateMap(currentStep, [], layers);
+          const dropFeatures = ceded.features.filter((feature) => {
+            return feature.properties.year === currentStep;
+          });
+          updateMap(0, [], layers);
+          updateMap(currentStep, dropFeatures, layers);
         })
       );
     </script>
