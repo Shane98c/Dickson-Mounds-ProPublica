@@ -86,12 +86,12 @@
         transform: scale(1);
         transform-box: fill-box;
         transform-origin: center;
-        animation: scaleAnim 1.3s forwards;
+        animation: scaleAnim 0.5s;
       }
 
       @keyframes scaleAnim {
         to {
-          transform: scale(1.1);
+          transform: scale(0.95);
         }
       }
 
@@ -169,7 +169,7 @@
     <div id="story"></div>
 
     <script src="./ceded_IL_selectFields.js"></script>
-    <script src="mapExtentFeature.js"></script>
+    <script src="mapExtentFeatureFull.js"></script>
 
     <script>
       //explainer then draw ceded bounds
@@ -257,7 +257,7 @@
         b.e = b[1][0];
         b.height = Math.abs(b.n - b.s);
         b.width = Math.abs(b.e - b.w);
-        s = 0.9 / Math.max(b.width / width, b.height / height);
+        s = 1.1 / Math.max(b.width / width, b.height / height);
         const t = [
           (width - s * (b[1][0] + b[0][0])) / 2,
           (height - s * (b[1][1] + b[0][1])) / 2,
@@ -274,7 +274,7 @@
         const Raster = svg
           .append("image")
           .attr("id", "Raster")
-          .attr("xlink:href", "301_z100_lt_cedeClip.png")
+          .attr("xlink:href", "cecessionsClipFull_1080.png")
           .attr("class", "raster")
           .attr("width", raster_width)
           .attr("height", raster_height)
@@ -310,7 +310,6 @@
 
         //add layers
         d3.json("IL_fromCede.geojson").then(function (geojson) {
-          console.log(geojson);
           ilGeo
             .selectAll("path")
             .data(geojson.features)
@@ -350,6 +349,8 @@
             .attr("d", path)
             .style("stroke", waterColor)
             .attr("stroke-width", 1);
+
+          rivers.selectAll("path");
         });
         d3.json("labels.geojson").then(function (geojson) {
           labels
@@ -372,15 +373,15 @@
           cededGeo,
           dropCededFeature,
           cededFader,
-          path
+          Raster,
+          path,
         };
       }
 
       function updateMap(year, dropFeatures, layers) {
-        console.log(year, dropFeatures, layers);
         //get features still waiting to be faded
         const stillHere = ceded.features.filter(function (feature) {
-          return feature.properties.year > year;
+          return feature.properties.year >= year;
         });
 
         //get features that should show up as faded on the map
@@ -388,6 +389,8 @@
           if (year === 0) return false;
           return feature.properties.year <= year;
         });
+
+        console.log(faded.length, stillHere.length);
 
         layers.cededGeo
           .selectAll("path")
@@ -422,14 +425,16 @@
             .attr("fill", dropFeatureColor)
             .attr("fill-opacity", 0.9)
             .attr("opacity", 1)
+            .attr("id", "clip")
+
             .transition()
-            .duration(600)
+            .duration(1000)
             .attr("fill", dropFeatureColor)
             .attr("opacity", 1)
             .attr("fill-opacity", 0.9)
 
-            .attr("stroke-width", 2)
-            .attr("stroke", "white")
+            .attr("stroke-width", 1)
+            .attr("stroke", "red")
 
             .attr("filter", "url(#dropshadow)");
         }
@@ -450,7 +455,7 @@
                   // .transition()
                   // .duration(500)
                   // .attr("opacity", 0)
-                  // .attr("id", "scaler")
+                  .attr("id", "scaler")
 
                   .transition()
                   .duration(500)
@@ -468,19 +473,19 @@
 
           .join(
             function (enter) {
-              return (
-                enter
-                  .append("path")
-                  .attr("fill", cededColor)
-                  .transition()
-                  .duration(500)
-                  .attr("opacity", 1)
-                  // .attr("stroke-width", 1)
-                  // .attr("stroke", "white")
-                  .attr("fill", fadedColor)
-                  .attr("d", layers.path)
-                  .attr("fill-opacity", 0.5)
-              );
+              return enter
+                .append("path")
+                .attr("fill", cededColor)
+                .transition()
+                .duration(500)
+                .attr("opacity", 1)
+                .attr("stroke-width", 1)
+                .attr("stroke", "red")
+                .attr("stroke-opacity", 0.5)
+
+                .attr("fill", fadedColor)
+                .attr("d", layers.path)
+                .attr("fill-opacity", 0.5);
             },
             function (update) {
               return update;
@@ -489,6 +494,10 @@
               return exit.remove();
             }
           );
+        //   const rasterOpacity = (stillHere.length/ceded.features.length)/2
+        //   console.log(rasterOpacity)
+        layers.Raster
+        .attr("clip-path", "url(#clip)");
       }
 
       let layers = setupMap();
