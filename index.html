@@ -289,6 +289,15 @@
         const ilStroke = svg.append("g");
         const dropCededFeature = svg.append("g");
         const labels = svg.append("g");
+        const clipper = svg
+          .append("clipPath")
+          .attr("width", raster_width)
+          .attr("height", raster_height)
+          .attr("id", "clip")
+          .attr(
+            "transform",
+            "translate(" + rtranslate_x + ", " + rtranslate_y + ")"
+          );
 
         //this is all for making the drop shadow used below
         const defs = dropCededFeature.append("defs");
@@ -374,6 +383,7 @@
           dropCededFeature,
           cededFader,
           Raster,
+          clipper,
           path,
         };
       }
@@ -391,6 +401,13 @@
         });
 
         console.log(faded.length, stillHere.length);
+
+        layers.clipper
+          .selectAll("path")
+          .data(faded, (d) => d.properties.id)
+          .enter()
+          .append("path")
+          .attr("d", layers.path);
 
         layers.cededGeo
           .selectAll("path")
@@ -419,24 +436,26 @@
           );
 
         function dropTransition(moment) {
-          return moment
-            .append("path")
-            .attr("d", layers.path)
-            .attr("fill", dropFeatureColor)
-            .attr("fill-opacity", 0.9)
-            .attr("opacity", 1)
-            .attr("id", "clip")
+          return (
+            moment
+              .append("path")
+              .attr("d", layers.path)
+              .attr("fill", dropFeatureColor)
+              .attr("fill-opacity", 0.9)
+              .attr("opacity", 1)
+              // .attr("id", "clip")
 
-            .transition()
-            .duration(1000)
-            .attr("fill", dropFeatureColor)
-            .attr("opacity", 1)
-            .attr("fill-opacity", 0.9)
+              .transition()
+              .duration(1000)
+              .attr("fill", dropFeatureColor)
+              .attr("opacity", 1)
+              .attr("fill-opacity", 0.9)
 
-            .attr("stroke-width", 1)
-            .attr("stroke", "red")
+              .attr("stroke-width", 1)
+              .attr("stroke", "red")
 
-            .attr("filter", "url(#dropshadow)");
+              .attr("filter", "url(#dropshadow)")
+          );
         }
         layers.dropCededFeature
           .selectAll("path")
@@ -496,8 +515,7 @@
           );
         //   const rasterOpacity = (stillHere.length/ceded.features.length)/2
         //   console.log(rasterOpacity)
-        layers.Raster
-        .attr("clip-path", "url(#clip)");
+        layers.Raster.attr("clip-path", "url(#clip)");
       }
 
       let layers = setupMap();
