@@ -88,6 +88,9 @@
         transform-origin: center;
         animation: scaleAnim 1.3s forwards;
       }
+      #fader {
+        opacity: 0.7;
+      }
 
       @keyframes scaleAnim {
         to {
@@ -271,6 +274,7 @@
         //setup layers
         const ilGeo = svg.append("g");
         const cededGeo = svg.append("g");
+        const cededCover = svg.append("g").attr("id", "fader");
         const Raster = svg
           .append("image")
           .attr("id", "Raster")
@@ -283,7 +287,7 @@
             "transform",
             "translate(" + rtranslate_x + ", " + rtranslate_y + ")"
           );
-        const cededFader = svg.append("g");
+        const cededFader = svg.append("g").attr("id", "fader");
         const rivers = svg.append("g");
         const lakes = svg.append("g");
         const ilStroke = svg.append("g");
@@ -310,7 +314,6 @@
 
         //add layers
         d3.json("IL_fromCede.geojson").then(function (geojson) {
-          console.log(geojson);
           ilGeo
             .selectAll("path")
             .data(geojson.features)
@@ -371,13 +374,13 @@
         return {
           cededGeo,
           dropCededFeature,
+          cededCover,
           cededFader,
-          path
+          path,
         };
       }
 
       function updateMap(year, dropFeatures, layers) {
-        console.log(year, dropFeatures, layers);
         //get features still waiting to be faded
         const stillHere = ceded.features.filter(function (feature) {
           return feature.properties.year > year;
@@ -465,7 +468,32 @@
         layers.cededFader
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
-
+          .join(
+            function (enter) {
+              return (
+                enter
+                  .append("path")
+                  .attr("fill", cededColor)
+                  .attr("mix-blend-mode", "lighten")
+                  .transition()
+                  .duration(500)
+                  // .attr("stroke-width", 1)
+                  // .attr("stroke", "white")
+                  .attr("fill", fadedColor)
+                  .attr("d", layers.path)
+                  .attr("fill-opacity", 1)
+              );
+            },
+            function (update) {
+              return update;
+            },
+            function (exit) {
+              return exit.remove();
+            }
+          );
+          layers.cededCover
+          .selectAll("path")
+          .data(faded, (d) => d.properties.id)
           .join(
             function (enter) {
               return (
@@ -474,12 +502,11 @@
                   .attr("fill", cededColor)
                   .transition()
                   .duration(500)
-                  .attr("opacity", 1)
                   // .attr("stroke-width", 1)
                   // .attr("stroke", "white")
                   .attr("fill", fadedColor)
                   .attr("d", layers.path)
-                  .attr("fill-opacity", 0.5)
+                  .attr("fill-opacity", 1)
               );
             },
             function (update) {
