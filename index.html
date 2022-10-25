@@ -82,6 +82,17 @@
         color: grey;
         opacity: 0.4;
       }
+      .pt-label {
+        opacity: 0.5;
+        font-size: 0.8rem;
+      }
+      .lake-label {
+        letter-spacing: 3px;
+        opacity: 0.15;
+      }
+      .river-labels {
+        font-size: 0.8rem;
+      }
       #scaler {
         transform: scale(1);
         transform-box: fill-box;
@@ -171,8 +182,8 @@
 
     <div id="story"></div>
 
-    <script src="./ceded_IL_selectFields.js"></script>
-    <script src="mapExtentFeature.js"></script>
+    <script src="data/ceded_IL_selectFields.js"></script>
+    <script src="data/mapExtentFeature.js"></script>
 
     <script>
       //explainer then draw ceded bounds
@@ -231,9 +242,9 @@
         backgroundColor = "#D4DBD0";
 
       function setupMap() {
+        d3.select("svg").remove();
         const projection = d3.geoMercator().scale(1).translate([0, 0]);
         const path = d3.geoPath().projection(projection);
-        d3.select("svg").remove();
         const selection = d3.select("#map");
         const width = selection._groups[0][0].clientWidth;
         const height = selection._groups[0][0].clientHeight;
@@ -278,7 +289,7 @@
         const Raster = svg
           .append("image")
           .attr("id", "Raster")
-          .attr("xlink:href", "301_z100_lt_cedeClip.png")
+          .attr("xlink:href", "data/301_z100_lt_cedeClip.png")
           .attr("class", "raster")
           .attr("width", raster_width)
           .attr("height", raster_height)
@@ -289,9 +300,13 @@
           );
         const cededFader = svg.append("g").attr("id", "fader");
         const rivers = svg.append("g");
+        const stateLines = svg.append("g");
         const lakes = svg.append("g");
         const ilStroke = svg.append("g");
         const dropCededFeature = svg.append("g");
+        const labelPts = svg.append("g");
+        const riverLabels = svg.append("g");
+        const lakeLabels = svg.append("g");
         const labels = svg.append("g");
 
         //this is all for making the drop shadow used below
@@ -313,7 +328,7 @@
         feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
         //add layers
-        d3.json("IL_fromCede.geojson").then(function (geojson) {
+        d3.json("data/IL_fromCede.geojson").then(function (geojson) {
           ilGeo
             .selectAll("path")
             .data(geojson.features)
@@ -333,7 +348,7 @@
             .attr("stroke-width", "2")
             .attr("stroke-opacity", "0.4");
         });
-        d3.json("Lakes_simp.geojson").then(function (geojson) {
+        d3.json("data/Lakes_simp.geojson").then(function (geojson) {
           lakes
             .selectAll("path")
             .data(geojson.features)
@@ -343,7 +358,10 @@
             .attr("fill-opacity", 1)
             .attr("d", path);
         });
-        d3.json("Rivers_simp.geojson").then(function (geojson) {
+        d3.json("data/Rivers_simp.geojson").then(function (geojson) {
+          const labeled = geojson.features.filter((feature) => {
+            return feature.properties.label;
+          });
           rivers
             .selectAll("path")
             .data(geojson.features)
@@ -353,11 +371,19 @@
             .attr("d", path)
             .style("stroke", waterColor)
             .attr("stroke-width", 1);
-        });
-        d3.json("labels.geojson").then(function (geojson) {
+        d3.json("data/labels.geojson").then(function (geojson) {
+          const states = geojson.features.filter((feature) => {
+            return feature.properties.type === "state";
+          });
+          const points = geojson.features.filter((feature) => {
+            return feature.properties.type === "ptPlace";
+          });
+          const lakes = geojson.features.filter((feature) => {
+            return feature.properties.type === "lake";
+          });
           labels
             .selectAll("path")
-            .data(geojson.features)
+            .data(states)
             .enter()
             .append("text")
             .attr("class", "place-label")
@@ -368,8 +394,63 @@
               return "translate(" + projection(d.geometry.coordinates) + ")";
             })
             .attr("text-anchor", "middle");
-          // .attr('dx', -20)
+
+          labelPts
+            .selectAll("circle")
+            .data(points)
+            .enter()
+            .append("circle")
+            .attr("cx", function (d) {
+              return projection(d.geometry.coordinates)[0];
+            })
+            .attr("cy", function (d) {
+              return projection(d.geometry.coordinates)[1];
+            })
+            .attr("r", 3)
+            .attr("opacity", 0.7);
+
+          lakeLabels
+            .selectAll("path")
+            .data(lakes)
+            .enter()
+            .append("text")
+            .attr("class", "lake-label")
+            .text(function (d) {
+              return d.properties.label;
+            })
+            .attr("transform", function (d) {
+              return "translate(" + projection(d.geometry.coordinates) + ")";
+            })
+            .attr("text-anchor", "middle");
+          // .attr("dx", 5);
+
+          labels
+            .selectAll("path")
+            .data(points)
+            .enter()
+            .append("text")
+            .attr("class", "pt-label")
+            .text(function (d) {
+              return d.properties.label;
+            })
+            .attr("transform", function (d) {
+              return "translate(" + projection(d.geometry.coordinates) + ")";
+            })
+            // .attr("text-anchor", "middle");
+            .attr("dx", 5);
           // .attr('dy', 15)
+        });
+        d3.json("data/borderingStates.geojson").then(function (geojson) {
+          stateLines
+            .selectAll("path")
+            .data(geojson.features)
+            .enter()
+            .append("path")
+            .attr("fill", "none")
+            .attr("d", path)
+            .style("stroke", "grey")
+            .attr("opacity", 0.6)
+            .attr("stroke-width", 0.5);
         });
         return {
           cededGeo,
@@ -491,7 +572,7 @@
               return exit.remove();
             }
           );
-          layers.cededCover
+        layers.cededCover
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
           .join(
