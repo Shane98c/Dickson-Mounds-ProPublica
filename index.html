@@ -371,6 +371,7 @@
             .attr("d", path)
             .style("stroke", waterColor)
             .attr("stroke-width", 1);
+        });
         d3.json("data/labels.geojson").then(function (geojson) {
           const states = geojson.features.filter((feature) => {
             return feature.properties.type === "state";
