@@ -19,7 +19,7 @@
         top: 0;
         height: 100vh;
         width: 100vw;
-        max-width: 100%;
+        max-width: 750px;
         position: sticky;
         font-family: Graphik, sans-serif;
       }
@@ -216,11 +216,11 @@
 
         story.innerHTML = year;
 
-        if (year === 1803) {
-          container.classList.remove("hidden");
-          story.innerHTML = "Treaties explainer";
-          container.classList.add("explainer");
-        }
+        // if (year === 1803) {
+        //   container.classList.remove("hidden");
+        //   story.innerHTML = "Treaties explainer";
+        //   container.classList.add("explainer");
+        // }
         chapter.appendChild(story);
 
         features.appendChild(container);
@@ -310,22 +310,22 @@
         const labels = svg.append("g");
 
         //this is all for making the drop shadow used below
-        const defs = dropCededFeature.append("defs");
-        const filter = defs.append("filter").attr("id", "dropshadow");
-        filter
-          .append("feGaussianBlur")
-          .attr("in", "SourceAlpha")
-          .attr("stdDeviation", 1)
-          .attr("result", "blur");
-        filter
-          .append("feOffset")
-          .attr("in", "blur")
-          .attr("dx", 0)
-          .attr("dy", 0)
-          .attr("result", "offsetBlur");
-        const feMerge = filter.append("feMerge");
-        feMerge.append("feMergeNode").attr("in", "offsetBlur");
-        feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+        // const defs = dropCededFeature.append("defs");
+        // const filter = defs.append("filter").attr("id", "dropshadow");
+        // filter
+        //   .append("feGaussianBlur")
+        //   .attr("in", "SourceAlpha")
+        //   .attr("stdDeviation", 1)
+        //   .attr("result", "blur");
+        // filter
+        //   .append("feOffset")
+        //   .attr("in", "blur")
+        //   .attr("dx", 0)
+        //   .attr("dy", 0)
+        //   .attr("result", "offsetBlur");
+        // const feMerge = filter.append("feMerge");
+        // feMerge.append("feMergeNode").attr("in", "offsetBlur");
+        // feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
         //add layers
         d3.json("data/IL_fromCede.geojson").then(function (geojson) {
@@ -465,13 +465,13 @@
       function updateMap(year, dropFeatures, layers) {
         //get features still waiting to be faded
         const stillHere = ceded.features.filter(function (feature) {
-          return feature.properties.year > year;
+          return feature.properties.year >= year;
         });
 
         //get features that should show up as faded on the map
         const faded = ceded.features.filter(function (feature) {
           if (year === 0) return false;
-          return feature.properties.year <= year;
+          return feature.properties.year < year;
         });
 
         layers.cededGeo
@@ -505,18 +505,17 @@
             .append("path")
             .attr("d", layers.path)
             .attr("fill", dropFeatureColor)
-            .attr("fill-opacity", 0.9)
+            .attr("fill-opacity", 0)
             .attr("opacity", 1)
             .transition()
             .duration(600)
             .attr("fill", dropFeatureColor)
             .attr("opacity", 1)
-            .attr("fill-opacity", 0.9)
 
-            .attr("stroke-width", 2)
-            .attr("stroke", "white")
+            .attr("stroke-width", 3)
+            .attr("stroke", "grey")
 
-            .attr("filter", "url(#dropshadow)");
+            // .attr("filter", "url(#dropshadow)");
         }
         layers.dropCededFeature
           .selectAll("path")
