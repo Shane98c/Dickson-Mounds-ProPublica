@@ -58,7 +58,7 @@
       }
       .pt-label {
         opacity: 0.5;
-        font-size: 0.8rem;
+        font-size: 0.9rem;
       }
       .lake-label {
         letter-spacing: 0px;
@@ -186,7 +186,10 @@
           //   .attr("d", path);
           ilStroke
             .selectAll("path")
-            .data(topojson.feature(IL_fromCede, IL_fromCede.objects.IL_fromCede).features)
+            .data(
+              topojson.feature(IL_fromCede, IL_fromCede.objects.IL_fromCede)
+                .features
+            )
             .enter()
             .append("path")
             .attr("d", path)
@@ -198,7 +201,10 @@
         d3.json("data/Lakes_simp.json").then(function (Lakes_simp) {
           lakes
             .selectAll("path")
-            .data(topojson.feature(Lakes_simp, Lakes_simp.objects.Lakes_simp).features)
+            .data(
+              topojson.feature(Lakes_simp, Lakes_simp.objects.Lakes_simp)
+                .features
+            )
             .enter()
             .append("path")
             .attr("fill", waterColor)
@@ -212,8 +218,11 @@
           rivers
             .selectAll("path")
             // .data(geojson.features)
-            .data(topojson.feature(Rivers_simp, Rivers_simp.objects.Rivers_simp).features)
-            
+            .data(
+              topojson.feature(Rivers_simp, Rivers_simp.objects.Rivers_simp)
+                .features
+            )
+
             .enter()
             .append("path")
             .attr("fill", "none")
@@ -293,7 +302,12 @@
         d3.json("data/borderingStates.json").then(function (borderingStates) {
           stateLines
             .selectAll("path")
-            .data(topojson.feature(borderingStates, borderingStates.objects.borderingStates).features)
+            .data(
+              topojson.feature(
+                borderingStates,
+                borderingStates.objects.borderingStates
+              ).features
+            )
             .enter()
             .append("path")
             .attr("fill", "none")
@@ -328,16 +342,14 @@
           .data(stillHere, (d) => d.properties.id)
           .join(
             function (enter) {
-              return (
-                enter
-                  .append("path")
-                  .transition()
-                  .duration(1000)
-                  .attr("fill", cededColor)
-                  .attr("d", layers.path)
-                  .attr("opacity", 1)
-                  .attr("fill-opacity", 1)
-              );
+              return enter
+                .append("path")
+                .transition()
+                .duration(500)
+                .attr("fill", cededColor)
+                .attr("d", layers.path)
+                .attr("opacity", 1)
+                .attr("fill-opacity", 1);
             },
             function (update) {
               return update;
@@ -348,20 +360,18 @@
           );
 
         function dropTransition(moment) {
-          return (
-            moment
-              .append("path")
-              .attr("d", layers.path)
-              .attr("fill-opacity", 0)
-              .attr("opacity", 1)
-              .transition()
-              .duration(600)
-              .attr("fill", dropFeatureColor)
-              .attr("opacity", 1)
-
-              .attr("stroke-width", 3)
-              .attr("stroke", "grey")
-          );
+          return moment
+            .append("path")
+            .attr("d", layers.path)
+            .attr("fill-opacity", 0)
+            .attr("opacity", 1)
+            .attr("stroke-width", 0)
+            .transition()
+            .duration(600)
+            .attr("fill", dropFeatureColor)
+            .attr("opacity", 1)
+            .attr("stroke-width", 3)
+            .attr("stroke", cededColor);
         }
         layers.dropCededFeature
           .selectAll("path")
@@ -375,13 +385,12 @@
               return update;
             },
             function (exit) {
-              return (
-                exit
-                  .transition()
-                  .duration(500)
-                  .attr("opacity", 0)
-                  .remove()
-              );
+              return exit
+                .transition()
+                .duration(500)
+                .attr("stroke-width", 0)
+                .attr("opacity", 0)
+                .remove();
             }
           );
 
@@ -395,8 +404,8 @@
                   .append("path")
                   .attr("fill", cededColor)
                   .attr("mix-blend-mode", "lighten")
-                  .transition()
-                  .duration(500)
+                  // .transition()
+                  // .duration(500)
                   .attr("fill", fadedColor)
                   .attr("d", layers.path)
                   .attr("fill-opacity", 1)
@@ -417,7 +426,7 @@
               return (
                 enter
                   .append("path")
-                  .attr("fill", cededColor)
+                  // .attr("fill", cededColor)
                   .transition()
                   .duration(500)
                   .attr("fill", fadedColor)
