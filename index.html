@@ -52,7 +52,8 @@
       }
 
       .place-label {
-        letter-spacing: 5px;
+        letter-spacing: 1px;
+        font-weight: 300;
         color: grey;
         opacity: 0.4;
       }
@@ -61,7 +62,6 @@
         font-size: 0.9rem;
       }
       .lake-label {
-        letter-spacing: 0px;
         opacity: 0.15;
       }
       .river-labels {
@@ -83,7 +83,6 @@
       <div id="info">
         <div id="year"></div>
       </div>
-      <ul id="progressContainer"></ul>
     </div>
 
     <script src="data/ceded_IL_selectFields.js"></script>
@@ -100,12 +99,12 @@
 
       let currentStep = 0;
 
-      const cededColor = "#67a19b",
+      const cededColor = "#724f4d",
         dropFeatureColor = "#e4eedd",
         fadedColor = "#f5f5f5",
         waterColor = "#dde6f1",
         waterStroke = "#cedef2",
-        backgroundColor = "#f3f2ee";
+        backgroundColor = "#f3f1ee";
 
       function setupMap() {
         d3.select("svg").remove();
@@ -119,8 +118,8 @@
           .select("#map")
           .append("svg")
           .attr("width", "100%")
-          .attr("height", "100%");
-
+          .attr("height", "100%")
+          .attr("display", "block")
         svg
           .append("rect")
           .attr("width", "100%")
