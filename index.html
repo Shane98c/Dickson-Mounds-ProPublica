@@ -8,12 +8,14 @@
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
     <script src="lib/d3.v7.min.js"></script>
-    <script src="lib/scrollama.min.js"></script>
+    <script src="lib/topojson.v3.min.js"></script>
 
     <style>
       body {
         margin: 0;
         padding: 0;
+        font-family: "Graphik", system-ui, Roboto, "Segoe UI", Helvetica, Arial,
+          Oxygen-Sans, Cantarell, Ubuntu, sans-serif;
       }
       #map {
         top: 0;
@@ -21,36 +23,12 @@
         width: 100vw;
         max-width: 750px;
         position: sticky;
-        font-family: Graphik, sans-serif;
       }
 
       input[type="range"] {
         position: absolute;
         top: 40%;
         transform: rotate(90deg);
-      }
-
-      #progressContainer {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        padding-left: 15px;
-      }
-      li {
-        display: block;
-        width: 6px;
-        height: 6px;
-        background-color: rgba(255, 255, 255, 0.7);
-        border-radius: 50%;
-        padding: 0;
-        margin: 3px 0;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        transition: border-color 0.3s ease, background-color 0.3s ease;
-      }
-      .active {
-        background-color: #5d8844;
-        border: 1px solid #5d8844;
-        opacity: 0.6;
       }
       #info {
         position: absolute;
@@ -67,27 +45,23 @@
       #year {
         font-size: 2rem;
         color: rgb(81, 81, 81);
-      }
-      #tribes {
-        font-size: 0.9rem;
-        color: rgb(81, 81, 81);
-      }
-
-      .explainer {
-        padding-bottom: 80vh !important;
+        color: #636453;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.5;
       }
 
       .place-label {
-        letter-spacing: 15px;
+        letter-spacing: 5px;
         color: grey;
         opacity: 0.4;
       }
       .pt-label {
         opacity: 0.5;
-        font-size: 0.8rem;
+        font-size: 0.9rem;
       }
       .lake-label {
-        letter-spacing: 3px;
+        letter-spacing: 0px;
         opacity: 0.15;
       }
       .river-labels {
@@ -102,144 +76,36 @@
       #fader {
         opacity: 0.7;
       }
-
-      @keyframes scaleAnim {
-        to {
-          transform: scale(1.1);
-        }
-      }
-
-      #features {
-        pointer-events: none;
-        padding-bottom: 10vh;
-        transform: translate3d(0, 0, 0);
-      }
-      #features:last-of-type {
-        padding-bottom: 100vh;
-      }
-      .hidden {
-        visibility: hidden;
-      }
-      .centered {
-        width: 90vw;
-        max-width: 550px;
-        margin: 0 auto;
-      }
-      .lefty {
-        width: 33vw;
-        max-width: 550px;
-        margin-left: 5vw;
-      }
-      .step {
-        z-index: 100;
-        padding-bottom: 20vh;
-        opacity: 0.95;
-      }
-      .step div {
-        pointer-events: auto;
-        padding: 15px 25px;
-        line-height: 1.5rem;
-        font-size: 1.1rem;
-        font-family: Graphik, sans-serif;
-        box-shadow: 2px 3px 10px rgb(0 0 0 / 50%);
-        color: #c3bfb5;
-        background-color: rgba(29, 29, 29);
-        border-radius: 6px;
-      }
-      .step p {
-        margin: 0px;
-      }
-
-      .step a {
-        color: #c3bfb5;
-      }
-
-      @media (max-width: 750px), (max-height: 750px) {
-        .centered,
-        .lefty,
-        .righty,
-        .fully {
-          width: 95vw;
-          margin: 0 auto;
-        }
-        .step div {
-          line-height: 1.2em;
-          padding: 10px 15px;
-          font-size: 1em;
-        }
-      }
     </style>
   </head>
   <body>
     <div id="map">
-      <!-- <input id="progress" type="range" min="1795" max="1833" step="1" /> -->
-
       <div id="info">
         <div id="year"></div>
       </div>
       <ul id="progressContainer"></ul>
     </div>
 
-    <div id="story"></div>
-
     <script src="data/ceded_IL_selectFields.js"></script>
     <script src="data/mapExtentFeature.js"></script>
 
     <script>
-      //explainer then draw ceded bounds
-      const years = new Set(
+      let years = new Set(
         ceded.features.map((feature) => {
           return feature.properties.year;
         })
       );
-
-      years.add(new Date().getFullYear());
+      years = Array.from(years);
+      years.push(1833); //extra so we can show empty map
 
       let currentStep = 0;
 
-      const story = document.getElementById("story");
-      const features = document.createElement("div");
-      features.setAttribute("id", "features");
-      const progressContainer = document.getElementById("progressContainer");
-
-      years.forEach((year, idx) => {
-        const container = document.createElement("div");
-        const chapter = document.createElement("div");
-
-        container.setAttribute("id", year);
-        container.classList.add("step");
-
-        container.appendChild(chapter);
-        container.classList.add("centered");
-        container.classList.add("hidden");
-        let story = document.createElement("p");
-
-        story.innerHTML = year;
-
-        // if (year === 1803) {
-        //   container.classList.remove("hidden");
-        //   story.innerHTML = "Treaties explainer";
-        //   container.classList.add("explainer");
-        // }
-        chapter.appendChild(story);
-
-        features.appendChild(container);
-
-        const progressStep = document.createElement("li");
-        progressStep.setAttribute("id", "li" + year);
-        progressContainer.appendChild(progressStep);
-      });
-
-      story.appendChild(features);
-
-      const scroller = scrollama();
-
-      const cededColor = "#5d8844",
+      const cededColor = "#67a19b",
         dropFeatureColor = "#e4eedd",
         fadedColor = "#f5f5f5",
         waterColor = "#dde6f1",
         waterStroke = "#cedef2",
-        backgroundColor = "#D4DBD0";
+        backgroundColor = "#f3f2ee";
 
       function setupMap() {
         d3.select("svg").remove();
@@ -283,13 +149,12 @@
         const rtranslate_y = (height - raster_height) / 2;
 
         //setup layers
-        const ilGeo = svg.append("g");
         const cededGeo = svg.append("g");
         const cededCover = svg.append("g").attr("id", "fader");
         const Raster = svg
           .append("image")
           .attr("id", "Raster")
-          .attr("xlink:href", "data/301_z100_lt_cedeClip.png")
+          .attr("xlink:href", "data/301_z100_lt_cedeClip-min.webp")
           .attr("class", "raster")
           .attr("width", raster_width)
           .attr("height", raster_height)
@@ -309,37 +174,22 @@
         const lakeLabels = svg.append("g");
         const labels = svg.append("g");
 
-        //this is all for making the drop shadow used below
-        // const defs = dropCededFeature.append("defs");
-        // const filter = defs.append("filter").attr("id", "dropshadow");
-        // filter
-        //   .append("feGaussianBlur")
-        //   .attr("in", "SourceAlpha")
-        //   .attr("stdDeviation", 1)
-        //   .attr("result", "blur");
-        // filter
-        //   .append("feOffset")
-        //   .attr("in", "blur")
-        //   .attr("dx", 0)
-        //   .attr("dy", 0)
-        //   .attr("result", "offsetBlur");
-        // const feMerge = filter.append("feMerge");
-        // feMerge.append("feMergeNode").attr("in", "offsetBlur");
-        // feMerge.append("feMergeNode").attr("in", "SourceGraphic");
-
         //add layers
-        d3.json("data/IL_fromCede.geojson").then(function (geojson) {
-          ilGeo
-            .selectAll("path")
-            .data(geojson.features)
-            .enter()
-            .append("path")
-            .attr("fill", "#f5f5f5")
-            .attr("fill-opacity", 1)
-            .attr("d", path);
+        d3.json("data/IL_fromCede.json").then(function (IL_fromCede) {
+          // ilGeo
+          //   .selectAll("path")
+          //   .data(topojson.feature(IL_fromCede, IL_fromCede.objects.IL_fromCede).features)
+          //   .enter()
+          //   .append("path")
+          //   .attr("fill", "#f5f5f5")
+          //   .attr("fill-opacity", 1)
+          //   .attr("d", path);
           ilStroke
             .selectAll("path")
-            .data(geojson.features)
+            .data(
+              topojson.feature(IL_fromCede, IL_fromCede.objects.IL_fromCede)
+                .features
+            )
             .enter()
             .append("path")
             .attr("d", path)
@@ -348,23 +198,31 @@
             .attr("stroke-width", "2")
             .attr("stroke-opacity", "0.4");
         });
-        d3.json("data/Lakes_simp.geojson").then(function (geojson) {
+        d3.json("data/Lakes_simp.json").then(function (Lakes_simp) {
           lakes
             .selectAll("path")
-            .data(geojson.features)
+            .data(
+              topojson.feature(Lakes_simp, Lakes_simp.objects.Lakes_simp)
+                .features
+            )
             .enter()
             .append("path")
             .attr("fill", waterColor)
             .attr("fill-opacity", 1)
             .attr("d", path);
         });
-        d3.json("data/Rivers_simp.geojson").then(function (geojson) {
-          const labeled = geojson.features.filter((feature) => {
-            return feature.properties.label;
-          });
+        d3.json("data/Rivers_simp.json").then(function (Rivers_simp) {
+          // const labeled = geojson.features.filter((feature) => {
+          //   return feature.properties.label;
+          // });
           rivers
             .selectAll("path")
-            .data(geojson.features)
+            // .data(geojson.features)
+            .data(
+              topojson.feature(Rivers_simp, Rivers_simp.objects.Rivers_simp)
+                .features
+            )
+
             .enter()
             .append("path")
             .attr("fill", "none")
@@ -441,10 +299,15 @@
             .attr("dx", 5);
           // .attr('dy', 15)
         });
-        d3.json("data/borderingStates.geojson").then(function (geojson) {
+        d3.json("data/borderingStates.json").then(function (borderingStates) {
           stateLines
             .selectAll("path")
-            .data(geojson.features)
+            .data(
+              topojson.feature(
+                borderingStates,
+                borderingStates.objects.borderingStates
+              ).features
+            )
             .enter()
             .append("path")
             .attr("fill", "none")
@@ -479,18 +342,14 @@
           .data(stillHere, (d) => d.properties.id)
           .join(
             function (enter) {
-              return (
-                enter
-                  .append("path")
-                  .transition()
-                  .duration(1000)
-                  // .attr("stroke-width", 0.5)
-                  // .style("stroke", "white")
-                  .attr("fill", cededColor)
-                  .attr("d", layers.path)
-                  .attr("opacity", 1)
-                  .attr("fill-opacity", 1)
-              );
+              return enter
+                .append("path")
+                .transition()
+                .duration(500)
+                .attr("fill", cededColor)
+                .attr("d", layers.path)
+                .attr("opacity", 1)
+                .attr("fill-opacity", 1);
             },
             function (update) {
               return update;
@@ -504,18 +363,15 @@
           return moment
             .append("path")
             .attr("d", layers.path)
-            .attr("fill", dropFeatureColor)
             .attr("fill-opacity", 0)
             .attr("opacity", 1)
+            .attr("stroke-width", 0)
             .transition()
             .duration(600)
             .attr("fill", dropFeatureColor)
             .attr("opacity", 1)
-
             .attr("stroke-width", 3)
-            .attr("stroke", "grey")
-
-            // .attr("filter", "url(#dropshadow)");
+            .attr("stroke", cededColor);
         }
         layers.dropCededFeature
           .selectAll("path")
@@ -529,20 +385,12 @@
               return update;
             },
             function (exit) {
-              return (
-                exit
-                  // .transition()
-                  // .duration(500)
-                  // .attr("opacity", 0)
-                  // .attr("id", "scaler")
-
-                  .transition()
-                  .duration(500)
-                  // .ease(d3.easeQuadIn)
-                  // .attr("transform", "translate(0," + height + ")")
-                  .attr("opacity", 0)
-                  .remove()
-              );
+              return exit
+                .transition()
+                .duration(500)
+                .attr("stroke-width", 0)
+                .attr("opacity", 0)
+                .remove();
             }
           );
 
@@ -556,10 +404,8 @@
                   .append("path")
                   .attr("fill", cededColor)
                   .attr("mix-blend-mode", "lighten")
-                  .transition()
-                  .duration(500)
-                  // .attr("stroke-width", 1)
-                  // .attr("stroke", "white")
+                  // .transition()
+                  // .duration(500)
                   .attr("fill", fadedColor)
                   .attr("d", layers.path)
                   .attr("fill-opacity", 1)
@@ -580,11 +426,9 @@
               return (
                 enter
                   .append("path")
-                  .attr("fill", cededColor)
+                  // .attr("fill", cededColor)
                   .transition()
                   .duration(500)
-                  // .attr("stroke-width", 1)
-                  // .attr("stroke", "white")
                   .attr("fill", fadedColor)
                   .attr("d", layers.path)
                   .attr("fill-opacity", 1)
@@ -602,37 +446,25 @@
       let layers = setupMap();
       updateMap(0, [], layers);
 
-      scroller
-        .setup({
-          step: ".step",
-          offset: 0.2,
-          progress: false,
-        })
-        .onStepEnter((response) => {
-          const year = parseInt(response.element.id);
-          years.forEach((yr) => {
-            if (yr === year) {
-              document.getElementById("li" + year).classList.add("active");
-            } else {
-              document.getElementById("li" + yr).classList.remove("active");
-            }
+      function loopMap(arr, time) {
+        let i = 0;
+        setInterval(() => {
+          let dropFeatures = ceded.features.filter((feature) => {
+            return feature.properties.year === arr[i];
           });
-          let dropFeatures = [];
-          if (response.direction === "down") {
-            dropFeatures = ceded.features.filter((feature) => {
-              return feature.properties.year === year;
-            });
-          }
-          document.getElementById("year").innerHTML = year;
-
-          if (response.direction === "up" && response.index === 0) {
-            currentStep = 0;
-            updateMap(0, [], layers);
+          document.getElementById("year").innerHTML = arr[i];
+          if (i === arr.length - 1) {
+            updateMap(2023, [], layers);
           } else {
-            currentStep = year;
-            updateMap(year, dropFeatures, layers);
+            updateMap(arr[i], dropFeatures, layers);
           }
-        });
+          i++;
+          if (i === arr.length) {
+            i = 0;
+          }
+        }, time);
+      }
+      loopMap(years, 1000);
 
       function debounce(fn) {
         let timer;
