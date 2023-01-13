@@ -177,7 +177,7 @@
         const dropCededFeature = svg.append("g");
         const labelPts = svg.append("g");
         const riverLabels = svg.append("g");
-        const lakeLabels = svg.append("g");
+        // const lakeLabels = svg.append("g");
         const labels = svg.append("g");
 
         //legend
@@ -320,19 +320,19 @@
             .attr("r", 3)
             .attr("opacity", 1);
 
-          lakeLabels
-            .selectAll("path")
-            .data(lakes)
-            .enter()
-            .append("text")
-            .attr("class", "lake-label")
-            .text(function (d) {
-              return d.properties.label;
-            })
-            .attr("transform", function (d) {
-              return "translate(" + projection(d.geometry.coordinates) + ")";
-            })
-            .attr("text-anchor", "middle");
+          // lakeLabels
+          //   .selectAll("path")
+          //   .data(lakes)
+          //   .enter()
+          //   .append("text")
+          //   .attr("class", "lake-label")
+          //   .text(function (d) {
+          //     return d.properties.label;
+          //   })
+          //   .attr("transform", function (d) {
+          //     return "translate(" + projection(d.geometry.coordinates) + ")";
+          //   })
+          //   .attr("text-anchor", "middle");
           // .attr("dx", 5);
 
           labels
