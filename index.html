@@ -55,15 +55,16 @@
         stroke: white;
         stroke-linecap: round;
         stroke-linejoin: round;
+        opacity: 0.5;
       }
       .pt-label {
-        opacity: 0.8;
+        opacity: 0.6;
         font-size: 0.9rem;
         paint-order: stroke;
-        /* stroke-width: 2px;
+        stroke-width: 2px;
         stroke: white;
         stroke-linecap: round;
-        stroke-linejoin: round; */
+        stroke-linejoin: round;
       }
       .lake-label {
         opacity: 0.3;
@@ -348,9 +349,9 @@
             })
             .attr("text-anchor", "start")
             .attr("dx", 5)
-            .attr("dy", function (d) {
-              return d.properties.label === "Chicago" ? 0 : 12;
-            });
+            // .attr("dy", function (d) {
+            //   return d.properties.label === "Chicago" ? 0 : 12;
+            // });
         });
         d3.json("data/borderingStates.json").then(function (borderingStates) {
           stateLines
