@@ -37,13 +37,10 @@
         right: 0;
         margin-left: auto;
         margin-right: auto;
-      }
-
-      #year {
-        font-size: 2rem;
-        font-weight: 700;
-        text-align: center;
-        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        font-weight: 550;
       }
 
       .place-label {
@@ -81,12 +78,30 @@
       #fader {
         opacity: 0.7;
       }
+
+      #dot-container {
+        display: flex;
+        justify-content: space-between;
+        margin: 0 3px;
+      }
+
+      .dot {
+        margin: 0 3px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background-color: black;
+        border: 1px solid black;
+        opacity: 0.5;
+      }
     </style>
   </head>
   <body>
     <div id="map">
       <div id="info">
-        <div id="year"></div>
+        <div id="startYear"></div>
+        <div id="dot-container"></div>
+        <div id="endYear"></div>
       </div>
     </div>
 
@@ -94,6 +109,13 @@
     <script src="data/mapExtentFeature.js"></script>
 
     <script>
+      const cededColor = "#724f4d",
+        dropFeatureColor = "#e4eedd",
+        fadedColor = "#ffffff",
+        waterColor = "#dde6f1",
+        waterStroke = "#cedef2",
+        backgroundColor = "#ffffff";
+
       let years = new Set(
         ceded.features.map((feature) => {
           return feature.properties.year;
@@ -102,16 +124,31 @@
       years = Array.from(years);
       years.push(1833); //extra so we can show empty map
 
+      years.forEach((year, i) => {
+        if (i === 0 || i === years.length - 1) {
+          const yearBounds = document.createElement("div");
+          yearBounds.classList.add("data-year");
+          yearBounds.innerHTML = year;
+          yearBounds.id = "year-" + year;
+          const container =
+            i === 0
+              ? document.getElementById("startYear")
+              : document.getElementById("endYear");
+
+          container.appendChild(yearBounds);
+        }
+        if (i !== years.length - 1) {
+          const dot = document.createElement("div");
+          dot.classList.add("dot");
+          dot.id = year;
+          dot.style.backgroundColor = cededColor;
+          document.getElementById("dot-container").appendChild(dot);
+        }
+      });
+
       let currentStep = 0;
 
-      const cededColor = "#724f4d",
-        dropFeatureColor = "#e4eedd",
-        fadedColor = "#ffffff",
-        waterColor = "#dde6f1",
-        waterStroke = "#cedef2",
-        backgroundColor = "#ffffff";
-
-      document.getElementById("year").style.color = cededColor;
+      document.getElementById("info").style.color = cededColor;
 
       function setupMap() {
         d3.select("svg").remove();
@@ -182,24 +219,6 @@
 
         //legend
         const map = document.getElementById("map").getBoundingClientRect();
-        // const box = svg
-        //   .append("rect")
-        //   .attr("width", "175px")
-        //   .attr("height", "60px")
-        //   .attr("x", 5)
-        //   .attr("y", map.height - 65)
-        //   .style("fill-opacity", 1)
-        //   .style("fill", backgroundColor)
-        //   .style("stroke-width", 0);
-        // const treaty = svg
-        //   .append("rect")
-        //   .attr("width", "40px")
-        //   .attr("height", "20px")
-        //   .attr("x", 10)
-        //   .attr("y", map.height - 60)
-        //   .style("fill-opacity", 0)
-        //   .style("stroke", cededColor)
-        //   .style("stroke-width", 3);
         const unceded = svg
           .append("rect")
           .attr("width", "40px")
@@ -210,12 +229,6 @@
           .style("stroke-width", 3)
           .style("opacity", 0.5)
           .style("fill", cededColor);
-        // const treatyText = svg
-        //   .append("text")
-        //   .attr("x", 60)
-        //   .attr("y", map.height - 46)
-        //   .text("Treaty Boundary")
-        //   .style("font-size", "0.8em");
         const uncededText = svg
           .append("text")
           .attr("x", 60)
@@ -226,14 +239,6 @@
 
         //add layers
         d3.json("data/IL_fromCede.json").then(function (IL_fromCede) {
-          // ilGeo
-          //   .selectAll("path")
-          //   .data(topojson.feature(IL_fromCede, IL_fromCede.objects.IL_fromCede).features)
-          //   .enter()
-          //   .append("path")
-          //   .attr("fill", backgroundColor)
-          //   .attr("fill-opacity", 1)
-          //   .attr("d", path);
           ilStroke
             .selectAll("path")
             .data(
@@ -264,9 +269,6 @@
             .attr("d", path);
         });
         d3.json("data/Rivers_simp.json").then(function (Rivers_simp) {
-          // const labeled = geojson.features.filter((feature) => {
-          //   return feature.properties.label;
-          // });
           rivers
             .selectAll("path")
             // .data(geojson.features)
@@ -320,21 +322,6 @@
             .attr("r", 3)
             .attr("opacity", 1);
 
-          // lakeLabels
-          //   .selectAll("path")
-          //   .data(lakes)
-          //   .enter()
-          //   .append("text")
-          //   .attr("class", "lake-label")
-          //   .text(function (d) {
-          //     return d.properties.label;
-          //   })
-          //   .attr("transform", function (d) {
-          //     return "translate(" + projection(d.geometry.coordinates) + ")";
-          //   })
-          //   .attr("text-anchor", "middle");
-          // .attr("dx", 5);
-
           labels
             .selectAll("path")
             .data(points)
@@ -349,9 +336,6 @@
             })
             .attr("text-anchor", "start")
             .attr("dx", 5);
-          // .attr("dy", function (d) {
-          //   return d.properties.label === "Chicago" ? 0 : 12;
-          // });
         });
         d3.json("data/borderingStates.json").then(function (borderingStates) {
           stateLines
@@ -382,13 +366,13 @@
       function updateMap(year, dropFeatures, layers) {
         //get features still waiting to be faded
         const stillHere = ceded.features.filter(function (feature) {
-          return feature.properties.year >= year;
+          return feature.properties.year > year;
         });
 
         //get features that should show up as faded on the map
         const faded = ceded.features.filter(function (feature) {
           if (year === 0) return false;
-          return feature.properties.year < year;
+          return feature.properties.year <= year;
         });
 
         layers.cededGeo
@@ -396,14 +380,16 @@
           .data(stillHere, (d) => d.properties.id)
           .join(
             function (enter) {
-              return enter
-                .append("path")
-                .transition()
-                .duration(500)
-                .attr("fill", cededColor)
-                .attr("d", layers.path)
-                .attr("opacity", 1)
-                .attr("fill-opacity", 1);
+              return (
+                enter
+                  .append("path")
+                  .transition()
+                  // .duration(500)
+                  .attr("fill", cededColor)
+                  .attr("d", layers.path)
+                  .attr("opacity", 1)
+                  .attr("fill-opacity", 1)
+              );
             },
             function (update) {
               return update;
@@ -413,57 +399,17 @@
             }
           );
 
-        // function dropTransition(moment) {
-        //   return moment
-        //     .append("path")
-        //     .attr("d", layers.path)
-        //     .attr("fill-opacity", 0)
-        //     .attr("opacity", 1)
-        //     .attr("stroke-width", 0)
-        //     .transition()
-        //     .duration(600)
-        //     .attr("fill", dropFeatureColor)
-        //     .attr("opacity", 1)
-        //     .attr("stroke-width", 3)
-        //     .attr("stroke", cededColor);
-        // }
-        // layers.dropCededFeature
-        //   .selectAll("path")
-        //   .data(dropFeatures, (d) => d.properties.id)
-
-        //   .join(
-        //     function (enter) {
-        //       return dropTransition(enter);
-        //     },
-        //     function (update) {
-        //       return update;
-        //     },
-        //     function (exit) {
-        //       return exit
-        //         .transition()
-        //         .duration(500)
-        //         .attr("stroke-width", 0)
-        //         .attr("opacity", 0)
-        //         .remove();
-        //     }
-        //   );
-
         layers.cededFader
           .selectAll("path")
           .data(faded, (d) => d.properties.id)
           .join(
             function (enter) {
-              return (
-                enter
-                  .append("path")
-                  .attr("fill", cededColor)
-                  .attr("mix-blend-mode", "lighten")
-                  // .transition()
-                  // .duration(500)
-                  .attr("fill", fadedColor)
-                  .attr("d", layers.path)
-                  .attr("fill-opacity", 1)
-              );
+              return enter
+                .append("path")
+                .attr("fill", fadedColor)
+                .attr("fill", fadedColor)
+                .attr("d", layers.path)
+                .attr("fill-opacity", 1);
             },
             function (update) {
               return update;
@@ -477,16 +423,12 @@
           .data(faded, (d) => d.properties.id)
           .join(
             function (enter) {
-              return (
-                enter
-                  .append("path")
-                  // .attr("fill", cededColor)
-                  .transition()
-                  .duration(500)
-                  .attr("fill", fadedColor)
-                  .attr("d", layers.path)
-                  .attr("fill-opacity", 1)
-              );
+              return enter
+                .append("path")
+                .transition()
+                .attr("fill", fadedColor)
+                .attr("d", layers.path)
+                .attr("fill-opacity", 1);
             },
             function (update) {
               return update;
@@ -506,14 +448,19 @@
           let dropFeatures = ceded.features.filter((feature) => {
             return feature.properties.year === arr[i];
           });
-          document.getElementById("year").innerHTML = arr[i];
+          document.getElementById(arr[i]).style.backgroundColor = fadedColor;
           if (i === arr.length - 1) {
             updateMap(2023, [], layers);
+            for (const el of document.getElementById("dot-container")
+              .children) {
+              el.style.backgroundColor = cededColor;
+            }
           } else {
             updateMap(arr[i], dropFeatures, layers);
           }
           i++;
           if (i === arr.length) {
+            updateMap(0, [], layers);
             i = 0;
           }
         }, time);
@@ -531,11 +478,6 @@
         "resize",
         debounce(function () {
           layers = setupMap();
-          const dropFeatures = ceded.features.filter((feature) => {
-            return feature.properties.year === currentStep;
-          });
-          updateMap(0, [], layers);
-          updateMap(currentStep, dropFeatures, layers);
         })
       );
     </script>
