@@ -422,10 +422,7 @@
           } else {
             document.getElementById("year").innerHTML = arr[i];
           }
-          if (i === arr.length - 1) {
-          } else {
-            updateMap(arr[i], dropFeatures, layers);
-          }
+          updateMap(arr[i], dropFeatures, layers);
           i++;
           if (i === arr.length) {
             i = 0;
