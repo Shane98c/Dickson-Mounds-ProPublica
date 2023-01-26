@@ -34,7 +34,7 @@
         transform: translate(-50%);
         display: flex;
         align-items: center;
-        font-size: 0.9rem;
+        font-size: 1rem;
         font-weight: 550;
       }
 
@@ -94,9 +94,7 @@
   <body>
     <div id="map">
       <div id="info">
-        <div id="startYear"></div>
-        <div id="dot-container"></div>
-        <div id="endYear"></div>
+        <div id="year"></div>
       </div>
     </div>
 
@@ -105,7 +103,7 @@
 
     <script>
       const cededColor = "#724f4d",
-        dropFeatureColor = "#e4eedd",
+        // dropFeatureColor = "#e4eedd",
         fadedColor = "#ffffff",
         waterColor = "#dde6f1",
         waterStroke = "#cedef2",
@@ -117,33 +115,10 @@
         })
       );
       years = Array.from(years);
-      years.push(1833); //extra so we can show empty map
-
-      years.forEach((year, i) => {
-        if (i === 0 || i === years.length - 1) {
-          const yearBounds = document.createElement("div");
-          yearBounds.classList.add("data-year");
-          yearBounds.innerHTML = year;
-          yearBounds.id = "year-" + year;
-          const container =
-            i === 0
-              ? document.getElementById("startYear")
-              : document.getElementById("endYear");
-
-          container.appendChild(yearBounds);
-        }
-        if (i !== years.length - 1) {
-          const dot = document.createElement("div");
-          dot.classList.add("dot");
-          dot.id = year;
-          dot.style.backgroundColor = cededColor;
-          document.getElementById("dot-container").appendChild(dot);
-        }
-      });
-
-      let currentStep = 0;
-
+      years.unshift(0); //pre so we can show full map
+      years.push(1833); //post so we can show empty map
       document.getElementById("info").style.color = cededColor;
+      document.getElementById("year").innerHTML = "pre-1795";
 
       function setupMap() {
         d3.select("svg").remove();
@@ -402,7 +377,6 @@
               return enter
                 .append("path")
                 .attr("fill", fadedColor)
-                .attr("fill", fadedColor)
                 .attr("d", layers.path)
                 .attr("fill-opacity", 1);
             },
@@ -443,19 +417,17 @@
           let dropFeatures = ceded.features.filter((feature) => {
             return feature.properties.year === arr[i];
           });
-          document.getElementById(arr[i]).style.backgroundColor = fadedColor;
+          if (arr[i] < 1795) {
+            document.getElementById("year").innerHTML = "pre-1795";
+          } else {
+            document.getElementById("year").innerHTML = arr[i];
+          }
           if (i === arr.length - 1) {
-            updateMap(2023, [], layers);
-            for (const el of document.getElementById("dot-container")
-              .children) {
-              el.style.backgroundColor = cededColor;
-            }
           } else {
             updateMap(arr[i], dropFeatures, layers);
           }
           i++;
           if (i === arr.length) {
-            updateMap(0, [], layers);
             i = 0;
           }
         }, time);
